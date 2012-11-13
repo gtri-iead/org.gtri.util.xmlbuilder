@@ -7,7 +7,8 @@
   <packaging>pom</packaging>
   <name>xmlbuilder</name>
     <modules>
-        <module>../main/trunk</module>
-        <module>../api/trunk</module>
+        <module>main</module>
+        <module>api</module>
+        <module>impl</module>
     </modules>
 </project>
