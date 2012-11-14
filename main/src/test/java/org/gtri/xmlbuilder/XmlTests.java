@@ -24,10 +24,14 @@ package org.gtri.xmlbuilder;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import javax.xml.stream.XMLStreamException;
 import org.gtri.util.iteratee.api.*;
+import org.gtri.util.iteratee.api.Consumer.Plan;
+import org.gtri.util.iteratee.api.Consumer.Result;
+import org.gtri.util.iteratee.impl.test.TestPrintConsumer;
 import org.gtri.util.xmlbuilder.XmlFactory;
-import org.gtri.util.xmlbuilder.impl.XmlEvent;
+import org.gtri.util.xmlbuilder.api.XmlEvent;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -62,10 +66,31 @@ public class XmlTests {
   }
 
   @Test
-  public void testXml() throws XMLStreamException, FileNotFoundException {
+  public void testWriteXml() throws XMLStreamException, FileNotFoundException {
+    System.out.println("===TEST WRITE XML===");
+    System.out.println("===Building Plan===");
     Producer<XmlEvent> reader = XmlFactory.instance().createXmlReader(new FileInputStream("src/test/resources/test.xsd"));
-//    XmlWriter writer = XmlFactory.instance().createXmlWriter(new FileOutputStream("target/test.out.xsd"));
-    Consumer<XmlEvent> c = new org.gtri.util.xmlbuilder.impl.test.XmlTestConsumer();
-    planner.connect(reader, c).run();
+    Consumer<XmlEvent> writer = XmlFactory.instance().createXmlWriter(new FileOutputStream("target/test.out.xsd"));
+    Plan<XmlEvent> plan = planner.connect(reader, writer);
+    System.out.println("===Running Plan===");
+    Result<XmlEvent> r = plan.run();
+    System.out.println("===Issues===");
+    for(Issue issue : r.getIssues()) {
+      System.out.println(issue);
+    }
+  }
+  @Test
+  public void testPrintXml() throws XMLStreamException, FileNotFoundException {
+    System.out.println("===TEST PRINT XML===");
+    System.out.println("===Building Plan===");
+    Producer<XmlEvent> reader = XmlFactory.instance().createXmlReader(new FileInputStream("src/test/resources/test.xsd"));
+    Consumer<XmlEvent> writer = new TestPrintConsumer<XmlEvent>();
+    Plan<XmlEvent> plan = planner.connect(reader, writer);
+    System.out.println("===Running Plan===");
+    Result<XmlEvent> r = plan.run();
+    System.out.println("===Issues===");
+    for(Issue issue : r.getIssues()) {
+      System.out.println(issue);
+    }
   }
 }
