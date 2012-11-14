@@ -8,12 +8,6 @@
   <packaging>jar</packaging>
   <name>xmlbuilder.main</name>
   
-  <parent>
-    <groupId>org.gtri</groupId>
-    <artifactId>super-pom</artifactId>
-    <version>1.6</version>
-  </parent>
-  
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -34,6 +28,11 @@
       <artifactId>iteratee.api</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>                
+    <dependency>
+      <groupId>net.sf.saxon</groupId>
+      <artifactId>Saxon-HE</artifactId>
+      <version>9.4</version>
+    </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
