@@ -28,6 +28,7 @@ import org.gtri.util.xmlbuilder.api.XmlContract
 import com.google.common.collect.ImmutableMap
 import scala.collection.JavaConversions._
 import org.gtri.util.xsddatatypes.XsdQName.NamespaceURIToPrefixResolver
+import org.gtri.util.xmlbuilder.api.XmlEvent
 
 /**
  * Created with IntelliJ IDEA.
@@ -78,10 +79,10 @@ case class XmlElement(
   }
 }
 
-sealed trait XmlEvent {
-  def locator : XmlLocator
-  def pushTo(contract : XmlContract)
-}
+//sealed trait XmlEvent {
+//  def locator : XmlLocator
+//  def pushTo(contract : XmlContract)
+//}
 
 case class StartXmlDocumentEvent(encoding : String, version : String, isStandAlone : Boolean, characterEncodingScheme : String, locator : XmlLocator) extends XmlEvent {
   def pushTo(p1: XmlContract) { }

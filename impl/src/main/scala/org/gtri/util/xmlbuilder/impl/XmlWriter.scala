@@ -26,12 +26,13 @@ import org.gtri.util.iteratee.impl.Consumer
 import org.gtri.util.iteratee.impl.Iteratee._
 import org.gtri.util.iteratee.impl.Issues.Warning
 import org.gtri.util.iteratee.api.Issue
-import org.apache.xml.serialize.XMLSerializer
-import org.xml.sax.ext.{LexicalHandler, Attributes2Impl}
 import org.gtri.util.xsddatatypes.XsdQName.NamespaceURIToPrefixResolver
 import org.gtri.util.xsddatatypes.{XsdNCName, XsdAnyURI}
 import annotation.tailrec
-import org.gtri.util.xmlbuilder.api
+import org.gtri.util.xmlbuilder.api.XmlEvent
+import org.gtri.util.xmlbuilder.api.XmlFactory.XMLStreamWriterFactory
+import javax.xml.stream.XMLStreamWriter
+import javax.xml.XMLConstants
 
 /**
  * Created with IntelliJ IDEA.
@@ -40,127 +41,105 @@ import org.gtri.util.xmlbuilder.api
  * Time: 9:05 PM
  * To change this template use File | Settings | File Templates.
  */
-class XmlWriter(serializer : XMLSerializer) extends Consumer[XmlEvent] {
-  private val contentHandler = serializer.asContentHandler
-  private val lexicalHandler : LexicalHandler = serializer
-  /*
-FileOutputStream fos = new FileOutputStream(filename);
-// XERCES 1 or 2 additionnal classes.
-OutputFormat of = new OutputFormat("XML","ISO-8859-1",true);
-of.setIndent(1);
-of.setIndenting(true);
-of.setDoctype(null,"users.dtd");
-XMLSerializer serializer = new XMLSerializer(fos,of);
-// SAX2.0 ContentHandler.
-ContentHandler hd = serializer.asContentHandler();
-hd.startDocument();
-// Processing instruction sample.
-//hd.processingInstruction("xml-stylesheet","type=\"text/xsl\" href=\"users.xsl\"");
-// USER attributes.
-AttributesImpl atts = new AttributesImpl();
-// USERS tag.
-hd.startElement("","","USERS",atts);
-// USER tags.
-String[] id = {"PWD122","MX787","A4Q45"};
-String[] type = {"customer","manager","employee"};
-String[] desc = {"Tim@Home","Jack&Moud","John D'oé"};
-for (int i=0;i<id.length;i++)
-{
-  atts.clear();
-  atts.addAttribute("","","ID","CDATA",id[i]);
-  atts.addAttribute("","","TYPE","CDATA",type[i]);
-  hd.startElement("","","USER",atts);
-  hd.characters(desc[i].toCharArray(),0,desc[i].length());
-  hd.endElement("","","USER");
-}
-hd.endElement("","","USERS");
-hd.endDocument();
-fos.close();
-   */
+class XmlWriter(factory : XMLStreamWriterFactory) extends Consumer[XmlEvent] {
+  private case class State( writer : XMLStreamWriter, issues : List[Issue], stack : List[XmlElement])
+
   def iteratee = {
-    def step(issues : List[Issue], stack : List[XmlElement]) : (Input[XmlEvent]) => Iteratee[XmlEvent, Unit] = {
+    def step(state : State) : (Input[XmlEvent]) => Iteratee[XmlEvent, Unit] = {
       case El(chunk, moreIssues) =>
-        val (newIssues, newStack) = chunk.foldLeft((issues, stack)) { writeXmlEvent(_,_) }
-        Cont(step(moreIssues ::: newIssues, newStack))
+        val newState = chunk.foldLeft(state) { writeXmlEvent(_,_) }
+        if(moreIssues.nonEmpty) {
+          Cont(step(newState.copy(issues = moreIssues ::: newState.issues)))
+        } else {
+          Cont(step(newState))
+        }
       case EOF() =>
-        Success((), issues, EOF[XmlEvent])
+        Success((), state.issues, EOF[XmlEvent])
       case Empty() =>
-        Cont(step(issues, stack))
+        Cont(step(state))
     }
 
-    def getNamespaceURIToPrefixMap(stack : List[XmlElement]) = new NamespaceURIToPrefixResolver {
+
+    def writeXmlEvent(state : State, xmlEvent: XmlEvent) : State = {
+
+      xmlEvent match {
+        case e:StartXmlDocumentEvent => {
+          state.writer.writeStartDocument()
+          state
+        }
+        case e:EndXmlDocumentEvent => {
+          state.writer.writeEndDocument()
+          state.writer.flush()
+          state.writer.close()
+          state.copy(writer = factory.create())
+        }
+        case e:AddXmlCommentEvent => {
+          state.writer.writeComment(e.comment)
+          state
+        }
+        case e:AddXmlElementEvent => {
+          val newStack = e.element :: state.stack
+
+          // Start element
+          val qName = e.element.qName
+          val localName = qName.getLocalName.toString
+          val nsURI = qName.getNamespaceURI.toString
+          val optionPrefix = Option(qName.resolvePrefix(getNamespaceURIToPrefixResolver(newStack))).map { _.toString }
+          val prefix = optionPrefix.getOrElse { XMLConstants.DEFAULT_NS_PREFIX }
+          state.writer.writeStartElement(prefix, localName, nsURI)
+
+          // Write namespace prefixes
+          for((namespacePrefix, namespaceURI) <- e.element.prefixToNamespaceURIMap) {
+            // Skip the prefix for the element
+            if(prefix != namespacePrefix.toString) {
+              state.writer.writeNamespace(namespacePrefix.toString, namespaceURI.toString)
+            }
+          }
+
+          // Write attributes
+          {
+            // Note: order of attributes is meaningless however, to achieve a stable output, attributes are sorted
+            val sortedAttributes = e.element.attributes.keySet.toList.sortWith( _.getLocalName.toString < _.getLocalName.toString)
+            for(qName <- sortedAttributes) {
+              val localName = qName.getLocalName.toString
+              val nsURI = qName.getNamespaceURI.toString
+              val optionPrefix = Option(qName.resolvePrefix(getNamespaceURIToPrefixResolver(state.stack))).map { _.toString }
+              val prefix = optionPrefix.getOrElse { XMLConstants.DEFAULT_NS_PREFIX }
+              val value = e.element.attributes(qName)
+              state.writer.writeAttribute(prefix, nsURI, localName, value)
+            }
+          }
+
+          // Write value (if any)
+          val value = e.element.value
+          if(value.isDefined) {
+            state.writer.writeCharacters(value.get)
+          }
+
+          state.copy(stack = newStack)
+        }
+        case e:EndXmlElementEvent => {
+          state.writer.writeEndElement()
+          state.copy(stack = state.stack.tail)
+        }
+        case e:AddXmlTextEvent => {
+          state.writer.writeCharacters(e.text)
+          state
+        }
+        case e:XmlEvent => {
+          val issue = Warning("Ignoring invalid XmlEvent '" + e.toString + "'", e.locator)
+          state.copy(issues = issue :: state.issues)
+        }
+      }
+    }
+
+    def getNamespaceURIToPrefixResolver(stack : List[XmlElement]) = new NamespaceURIToPrefixResolver {
       def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) = {
         doIsValidPrefixForNamespaceURI(stack, prefix, namespaceURI)
       }
 
       def getPrefixForNamespaceURI(namespaceURI: XsdAnyURI) : XsdNCName = {
         doGetPrefixForNamespaceURI(stack, namespaceURI)
-      }
-    }
-
-
-    def writeXmlEvent(tuple : (List[Issue], List[XmlElement]), xmlEvent: XmlEvent) : (List[Issue], List[XmlElement]) = {
-      val (issues, stack) = tuple
-      xmlEvent match {
-        case e:StartXmlDocumentEvent => {
-          contentHandler.startDocument()
-          tuple
-        }
-        case e:EndXmlDocumentEvent => {
-          contentHandler.endDocument()
-          tuple
-        }
-        case e:AddXmlCommentEvent => {
-          lexicalHandler.comment(e.comment.toArray,0,e.comment.length)
-          tuple
-        }
-        case e:AddXmlElementEvent => {
-          for((prefix, namespaceURI) <- e.element.prefixToNamespaceURIMap) {
-            contentHandler.startPrefixMapping(prefix.toString, namespaceURI.toString)
-          }
-
-          val saxAttributes = new Attributes2Impl
-          for((qName, value) <- e.element.attributes) {
-            saxAttributes.addAttribute(
-              qName.getNamespaceURI.toString,
-              qName.getLocalName.toString,
-              qName.toStringWithPrefix(getNamespaceURIToPrefixMap(stack)),
-              null,
-              value
-            )
-          }
-          val qName = e.element.qName
-          contentHandler.startElement(
-            qName.getNamespaceURI.toString,
-            qName.getLocalName.toString,
-            qName.toStringWithPrefix(getNamespaceURIToPrefixMap(stack)),
-            saxAttributes
-          )
-
-          val value = e.element.value
-          if(value.isDefined) {
-            val strValue = value.get
-            contentHandler.characters(strValue.toArray, 0, strValue.length)
-          }
-          (issues, e.element :: stack)
-        }
-        case e:EndXmlElementEvent => {
-          val qName = e.qName
-          contentHandler.endElement(
-            qName.getNamespaceURI.toString,
-            qName.getLocalName.toString,
-            qName.toStringWithPrefix(getNamespaceURIToPrefixMap(stack))
-          )
-          (issues, stack.tail)
-        }
-        case e:AddXmlTextEvent => {
-          contentHandler.characters(e.text.toArray, 0, e.text.length)
-          tuple
-        }
-        case e:XmlEvent => {
-          val issue = Warning("Ignoring invalid XmlEvent '" + e.toString + "'", e.locator)
-          (issue :: issues, stack)
-        }
       }
     }
 
@@ -193,6 +172,6 @@ fos.close();
       }
     }
 
-    Cont(step(Nil, Nil))
+    Cont(step(State(factory.create(), Nil, Nil)))
   }
 }

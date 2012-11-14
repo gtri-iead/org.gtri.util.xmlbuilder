@@ -29,7 +29,8 @@ import collection.mutable.ArrayBuffer
 import collection.mutable.Queue
 import javax.xml.stream.{XMLStreamReader, XMLStreamConstants}
 import org.gtri.util.xsddatatypes._
-import org.gtri.util.xmlbuilder.api
+import org.gtri.util.xmlbuilder.api.XmlEvent
+import org.gtri.util.xmlbuilder.api.XmlFactory.XMLStreamReaderFactory
 
 /**
  * Created with IntelliJ IDEA.
@@ -38,16 +39,21 @@ import org.gtri.util.xmlbuilder.api
  * Time: 6:49 PM
  * To change this template use File | Settings | File Templates.
  */
-class XmlReader(val reader : XMLStreamReader, val chunkSize : Int = 8) extends Producer[XmlEvent] {
+class XmlReader(factory : XMLStreamReaderFactory, val chunkSize : java.lang.Integer = 8) extends Producer[XmlEvent] {
 
   def enumerator : Enumerator[XmlEvent] = {
     new Enumerator[XmlEvent] {
 
       private val outputBuffer = new ArrayBuffer[XmlEvent](chunkSize)
       private val inputQueue = new Queue[XmlEvent]()
+      private val reader = factory.create()
 
       def enumerate[V](i : Iteratee[XmlEvent,V]) : Iteratee[XmlEvent,V] = {
         doEnumerate(next, i)
+      }
+
+      def close() {
+        reader.close()
       }
 
       @tailrec
@@ -83,6 +89,9 @@ class XmlReader(val reader : XMLStreamReader, val chunkSize : Int = 8) extends P
               case XMLStreamConstants.CDATA => {
                 Some(AddXmlTextEvent(reader.getText(), getLocatorFromReader))
               }
+              case XMLStreamConstants.COMMENT => {
+                Some(AddXmlCommentEvent(reader.getText(), getLocatorFromReader))
+            }
               case _ =>
                 next
             }
@@ -103,14 +112,15 @@ class XmlReader(val reader : XMLStreamReader, val chunkSize : Int = 8) extends P
           case Cont(k) =>
             if(nextEvent.isDefined) {
               if(outputBuffer.size < chunkSize) {
-                outputBuffer += nextEvent.get
+                val event = nextEvent.get
+                outputBuffer += event
                 doEnumerate[V](next, i)
               } else {
                 val nextI = flushOutputBuffer(k)
                 doEnumerate[V](next, nextI)
               }
             } else {
-              i
+              flushOutputBuffer(k)
             }
         }
       }
@@ -150,8 +160,8 @@ class XmlReader(val reader : XMLStreamReader, val chunkSize : Int = 8) extends P
           }
 
         // Note: this must come after all the other element parameters are extracted from reader since this call will change the reader's state
-        val value = peekParseElementValue(next, Nil)
-
+//        val value = peekParseElementValue(next, Nil)
+        val value = None
         XmlElement(qName, value, attributes.toMap, prefixes.toMap)
       }
 
@@ -185,7 +195,7 @@ class XmlReader(val reader : XMLStreamReader, val chunkSize : Int = 8) extends P
               peekParseElementValue(next, e :: textEvents)
             }
             case e:EndXmlElementEvent => {
-              inputQueue += e
+              inputQueue.enqueue(e)
               val result = textEvents.foldLeft(new StringBuilder) { (s,textEvent) => s.append(textEvent.text) }
               Some(result.toString)
             }
