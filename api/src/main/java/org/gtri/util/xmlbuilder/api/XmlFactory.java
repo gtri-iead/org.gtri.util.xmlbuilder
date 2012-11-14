@@ -16,23 +16,32 @@
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with org.gtri.util.xmlbuilder library. If not, see <http://www.gnu.org/licenses/>.
+    along with org.gtri.util.iteratee library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package org.gtri.util.xmlbuilder.api;
 
-import org.gtri.util.iteratee.api.ImmutableDiagnosticLocator;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
+import org.gtri.util.iteratee.api.Consumer;
+import org.gtri.util.iteratee.api.Producer;
 
 /**
  *
  * @author Lance
  */
-public interface XmlEvent {
-  ImmutableDiagnosticLocator locator();
-  void pushTo(XmlContract contract);
+public interface XmlFactory {
+  
+  public static interface XMLStreamReaderFactory {
+    XMLStreamReader create() throws XMLStreamException;
+  }
+  
+  public static interface XMLStreamWriterFactory {
+    XMLStreamWriter create() throws XMLStreamException;
+  }
+  
+  Producer<XmlEvent> createXmlReader(XMLStreamReaderFactory factory, int chunkSize);
+  
+  Consumer<XmlEvent> createXmlWriter(XMLStreamWriterFactory factory);  
 }
