@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema id="abc123" targetNamespace="http://testy.test.test"
-    version="1" attributeFormDefault="qualified"
-    elementFormDefault="qualified"
-    blockDefault="extension restriction substitution" finalDefault=""
-    xml:lang="en" xmlns="http://testy.test.test" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://testy.test.test"
+           attributeFormDefault="qualified"
+           blockDefault="extension restriction substitution"
+           elementFormDefault="qualified"
+           finalDefault=""
+           id="abc123"
+           xml:lang="en"
+           targetNamespace="http://testy.test.test"
+           version="1">
     <!-- test comment -->
     <xs:include schemaLocation="http://www.w3schools.com/schema/customer.xsd"/>
     <xs:annotation>

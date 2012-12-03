@@ -73,6 +73,10 @@ public final class XmlFactory implements org.gtri.util.xmlbuilder.api.XmlFactory
   }
   
   public Enumerator<XmlEvent> createXmlReader(final InputStream in) {
+    return createXmlReader(in, STD_CHUNK_SIZE);
+  }
+  
+  public Enumerator<XmlEvent> createXmlReader(final InputStream in, int chunkSize) {
     final Lazy<ByteArrayOutputStream> lazyBaos = new Lazy<ByteArrayOutputStream>() {
       @Override
       public ByteArrayOutputStream init() {
@@ -95,12 +99,12 @@ public final class XmlFactory implements org.gtri.util.xmlbuilder.api.XmlFactory
     return createXmlReader(
       new XMLStreamReaderFactory() {
         @Override
-        public XMLStreamReader create() throws XMLStreamException {
+        public Result create() throws XMLStreamException {
           byte[] content = lazyBaos.get().toByteArray();
-          return XMLInputFactory.newInstance().createXMLStreamReader(new ByteArrayInputStream(content));
+          return new XMLStreamReaderFactory.Result(XMLInputFactory.newInstance().createXMLStreamReader(new ByteArrayInputStream(content)), content.length);
         }
       }, 
-      STD_CHUNK_SIZE
+      chunkSize
     );
   }
 
