@@ -19,18 +19,39 @@
     along with org.gtri.util.xmlbuilder library. If not, see <http://www.gnu.org/licenses/>.
 
 */
+package org.gtri.util.xmlbuilder.api;
 
-///*
-// * To change this template, choose Tools | Templates
-// * and open the template in the editor.
-// */
-//package org.gtri.util.xmlbuilder.api;
-//
-//import org.gtri.util.iteratee.api.Producer;
-//
-///**
-// *
-// * @author Lance
-// */
-//public interface XmlReader extends Producer<XmlEvent> {
-//}
+import org.gtri.util.iteratee.api.ImmutableDiagnosticLocator;
+
+/**
+ * An interface for the location of an event within an XML file.
+ * 
+ * @author lance.gatlin@gmail.com
+ */
+public interface XmlFileLocator extends ImmutableDiagnosticLocator {
+  /**
+   * Get the character offset
+   * @return the character offset
+   */
+  int getCharOffset();
+  /**
+   * Get the column number
+   * @return the column number
+   */
+  int getColumnNumber();
+  /**
+   * Get the line number
+   * @return the line number
+   */
+  int getLineNumber();
+  /**
+   * Get the public identifier
+   * @return the public identifier
+   */
+  String getPublicId();
+  /**
+   * Get the system identifier
+   * @return the system identifier
+   */
+  String getSystemId();
+}

@@ -60,7 +60,7 @@ import org.gtri.util.xsddatatypes.XsdQName;
  * attributes set" and "no prefixes set".
  * 
  * 
- * @author Lance
+ * @author lance.gatlin@gmail.com
  */
 public interface XmlContract {
   

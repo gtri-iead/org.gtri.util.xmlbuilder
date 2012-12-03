@@ -24,12 +24,12 @@ package org.gtri.util.xmlbuilder.api;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
-import org.gtri.util.iteratee.api.Consumer;
-import org.gtri.util.iteratee.api.Producer;
+import org.gtri.util.iteratee.api.Enumerator;
+import org.gtri.util.iteratee.api.Iteratee;
 
 /**
  *
- * @author Lance
+ * @author lance.gatlin@gmail.com
  */
 public interface XmlFactory {
   
@@ -41,7 +41,7 @@ public interface XmlFactory {
     XMLStreamWriter create() throws XMLStreamException;
   }
   
-  Producer<XmlEvent> createXmlReader(XMLStreamReaderFactory factory, int chunkSize);
+  Enumerator<XmlEvent> createXmlReader(XMLStreamReaderFactory factory, int chunkSize);
   
-  Consumer<XmlEvent> createXmlWriter(XMLStreamWriterFactory factory);  
+  Iteratee<XmlEvent,?> createXmlWriter(XMLStreamWriterFactory factory);  
 }

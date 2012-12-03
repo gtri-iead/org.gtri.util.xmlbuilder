@@ -36,16 +36,15 @@ import javax.xml.stream.XMLStreamWriter;
 import net.sf.saxon.s9api.Processor;
 import net.sf.saxon.s9api.SaxonApiException;
 import net.sf.saxon.s9api.Serializer;
-import org.gtri.util.iteratee.api.Consumer;
-import org.gtri.util.iteratee.api.Lazy;
-import org.gtri.util.iteratee.api.Producer;
+import org.gtri.util.iteratee.api.Enumerator;
+import org.gtri.util.iteratee.api.Iteratee;
 import org.gtri.util.xmlbuilder.api.XmlEvent;
 import org.gtri.util.xmlbuilder.impl.XmlReader;
 import org.gtri.util.xmlbuilder.impl.XmlWriter;
         
 /**
  *
- * @author Lance
+ * @author lance.gatlin@gmail.com
  */
 public final class XmlFactory implements org.gtri.util.xmlbuilder.api.XmlFactory {
   private XmlFactory() { }
@@ -54,15 +53,26 @@ public final class XmlFactory implements org.gtri.util.xmlbuilder.api.XmlFactory
   public static final int STD_CHUNK_SIZE = 256;
 
   @Override
-  public Producer<XmlEvent> createXmlReader(final XMLStreamReaderFactory factory, int chunkSize) {
+  public Enumerator<XmlEvent> createXmlReader(final XMLStreamReaderFactory factory, int chunkSize) {
     return new XmlReader(factory, chunkSize);
   }
   
-  public Producer<XmlEvent> createXmlReader(final XMLStreamReaderFactory factory) {
+  public Enumerator<XmlEvent> createXmlReader(final XMLStreamReaderFactory factory) {
     return createXmlReader(factory, STD_CHUNK_SIZE);
   }
   
-  public Producer<XmlEvent> createXmlReader(final InputStream in) {
+  private abstract class Lazy<T> {
+    private T value = null;
+    T get() {
+      if(value == null) {
+        value = init();
+      }
+      return value;
+    }
+    abstract T init();
+  }
+  
+  public Enumerator<XmlEvent> createXmlReader(final InputStream in) {
     final Lazy<ByteArrayOutputStream> lazyBaos = new Lazy<ByteArrayOutputStream>() {
       @Override
       public ByteArrayOutputStream init() {
@@ -95,11 +105,11 @@ public final class XmlFactory implements org.gtri.util.xmlbuilder.api.XmlFactory
   }
 
   @Override
-  public Consumer<XmlEvent> createXmlWriter(final XMLStreamWriterFactory factory) {
+  public Iteratee<XmlEvent,?> createXmlWriter(final XMLStreamWriterFactory factory) {
     return new XmlWriter(factory);
   }
   
-  public Consumer<XmlEvent> createXmlWriter(final OutputStream out) {
+  public Iteratee<XmlEvent,?> createXmlWriter(final OutputStream out) {
     return createXmlWriter(new XMLStreamWriterFactory(){ 
 
       @Override

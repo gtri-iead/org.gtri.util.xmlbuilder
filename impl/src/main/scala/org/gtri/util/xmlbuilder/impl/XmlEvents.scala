@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap
 import scala.collection.JavaConversions._
 import org.gtri.util.xsddatatypes.XsdQName.NamespaceURIToPrefixResolver
 import org.gtri.util.xmlbuilder.api.XmlEvent
+import org.gtri.util.xmlbuilder.api
 
 /**
  * Created with IntelliJ IDEA.
@@ -37,68 +38,26 @@ import org.gtri.util.xmlbuilder.api.XmlEvent
  * Time: 4:45 AM
  * To change this template use File | Settings | File Templates.
  */
-case class XmlLocator(charOffset : Int, columnNumber : Int, lineNumber : Int, publicId : String, systemId : String) extends ImmutableDiagnosticLocator {
-  override def toString = {
-    val s = new StringBuilder
-    s.append('[')
-    if (publicId != null) {
-      s.append(publicId)
-      s.append(' ')
-    }
-    if (systemId != null) {
-      s.append(systemId)
-      s.append(' ')
-    }
-    s.append(lineNumber)
-    s.append(':')
-    s.append(columnNumber)
-    s.append(']')
-    s.toString
-  }
-}
-
-case class XmlElement(
-                       qName : XsdQName,
-                       value : Option[String],
-                       attributes : Map[XsdQName, String],
-                       prefixToNamespaceURIMap : Map[XsdNCName, XsdAnyURI]
-                       ) extends NamespaceURIToPrefixResolver {
-  lazy val namespaceURIToPrefixMap = prefixToNamespaceURIMap.map(_.swap)
-
-  def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) = {
-    val optionNsURI = prefixToNamespaceURIMap.get(prefix)
-    if(optionNsURI.isDefined) {
-      optionNsURI.get == namespaceURI
-    } else {
-      false
-    }
-  }
-
-  def getPrefixForNamespaceURI(namespaceURI: XsdAnyURI) = {
-    namespaceURIToPrefixMap.get(namespaceURI).orNull
-  }
-}
-
 //sealed trait XmlEvent {
-//  def locator : XmlLocator
+//  def locator : XmlFileLocator
 //  def pushTo(contract : XmlContract)
 //}
 
-case class StartXmlDocumentEvent(encoding : String, version : String, isStandAlone : Boolean, characterEncodingScheme : String, locator : XmlLocator) extends XmlEvent {
-  def pushTo(p1: XmlContract) { }
+case class StartXmlDocumentEvent(encoding : String, version : String, isStandAlone : Boolean, characterEncodingScheme : String, locator : XmlFileLocator) extends XmlEvent {
+  def pushTo(contract: XmlContract) { }
 }
 
-case class EndXmlDocumentEvent(locator : XmlLocator) extends XmlEvent {
-  def pushTo(p1: XmlContract) {}
+case class EndXmlDocumentEvent(locator : XmlFileLocator) extends XmlEvent {
+  def pushTo(contract: XmlContract) {}
 }
 
-case class AddXmlCommentEvent(comment : String, locator : XmlLocator) extends XmlEvent {
+case class AddXmlCommentEvent(comment : String, locator : XmlFileLocator) extends XmlEvent {
   def pushTo(contract: XmlContract) {
     contract.addXmlComment(comment)
   }
 }
 
-case class AddXmlElementEvent(element : XmlElement, locator : XmlLocator) extends XmlEvent {
+case class AddXmlElementEvent(element : XmlElement, locator : XmlFileLocator) extends XmlEvent {
   def pushTo(contract: XmlContract) {
     val prefixToNamespaceURIMap = {
       val builder = ImmutableMap.builder[XsdNCName, XsdAnyURI]()
@@ -118,15 +77,14 @@ case class AddXmlElementEvent(element : XmlElement, locator : XmlLocator) extend
 
   }
 }
-case class EndXmlElementEvent(qName : XsdQName, locator : XmlLocator) extends XmlEvent {
+case class EndXmlElementEvent(qName : XsdQName, locator : XmlFileLocator) extends XmlEvent {
   def pushTo(contract: XmlContract) {
     contract.endXmlElement()
   }
 
 }
-case class AddXmlTextEvent(text : String, locator : XmlLocator) extends XmlEvent {
+case class AddXmlTextEvent(text : String, locator : XmlFileLocator) extends XmlEvent {
   def pushTo(contract: XmlContract) {
     contract.addXmlText(text)
   }
-
 }

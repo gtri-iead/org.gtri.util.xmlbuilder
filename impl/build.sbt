@@ -12,9 +12,11 @@ resolvers += "iead-all" at "https://iead.ittl.gtri.org/artifactory/all" // need 
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "1.6.1"
 
-libraryDependencies += "org.gtri.util" % "xmlbuilder.api" % "1.0-SNAPSHOT"
+libraryDependencies += "com.google.guava" % "guava" % "11.0.2"
 
-libraryDependencies += "org.gtri.util" %% "iteratee.impl" % "1.0-SNAPSHOT"
+//libraryDependencies += "org.gtri.util" % "xmlbuilder.api" % "1.0-SNAPSHOT"
+
+//libraryDependencies += "org.gtri.util" %% "iteratee.impl" % "1.0-SNAPSHOT"
 
 libraryDependencies += "xerces" % "xercesImpl" % "2.4.0"
 

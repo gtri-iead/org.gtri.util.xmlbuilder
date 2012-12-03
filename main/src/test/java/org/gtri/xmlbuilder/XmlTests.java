@@ -27,9 +27,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import javax.xml.stream.XMLStreamException;
 import org.gtri.util.iteratee.api.*;
-import org.gtri.util.iteratee.api.Consumer.Plan;
-import org.gtri.util.iteratee.api.Consumer.Result;
 import org.gtri.util.iteratee.impl.test.TestPrintConsumer;
+import org.gtri.util.iteratee.IterateeFactory;
 import org.gtri.util.xmlbuilder.XmlFactory;
 import org.gtri.util.xmlbuilder.api.XmlEvent;
 import org.junit.After;
@@ -37,14 +36,14 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
+import static org.junit.Assert.*;
 
 /**
  *
- * @author Lance
+ * @author lance.gatlin@gmail.com
  */
 public class XmlTests {
-  Planner planner = new org.gtri.util.iteratee.impl.Planner();
+  IterateeFactory factory = new IterateeFactory();
   
   public XmlTests() {
   }
@@ -69,28 +68,30 @@ public class XmlTests {
   public void testWriteXml() throws XMLStreamException, FileNotFoundException {
     System.out.println("===TEST WRITE XML===");
     System.out.println("===Building Plan===");
-    Producer<XmlEvent> reader = XmlFactory.instance().createXmlReader(new FileInputStream("src/test/resources/test.xsd"));
-    Consumer<XmlEvent> writer = XmlFactory.instance().createXmlWriter(new FileOutputStream("target/test.out.xsd"));
-    Plan<XmlEvent> plan = planner.connect(reader, writer);
+    Enumerator<XmlEvent> reader = XmlFactory.instance().createXmlReader(new FileInputStream("src/test/resources/test.xsd"));
+    Iteratee<XmlEvent,?> writer = XmlFactory.instance().createXmlWriter(new FileOutputStream("target/test.out.xsd"));
+    Plan2<XmlEvent,?> plan = factory.createPlan(reader, writer);
     System.out.println("===Running Plan===");
-    Result<XmlEvent> r = plan.run();
+    Plan2.RunResult<XmlEvent,?> r = plan.run();
     System.out.println("===Issues===");
-    for(Issue issue : r.getIssues()) {
+    for(Issue issue : r.allIssues()) {
       System.out.println(issue);
     }
+    assertTrue(r.statusCode().isSuccess());
   }
   @Test
   public void testPrintXml() throws XMLStreamException, FileNotFoundException {
     System.out.println("===TEST PRINT XML===");
     System.out.println("===Building Plan===");
-    Producer<XmlEvent> reader = XmlFactory.instance().createXmlReader(new FileInputStream("src/test/resources/test.xsd"));
-    Consumer<XmlEvent> writer = new TestPrintConsumer<XmlEvent>();
-    Plan<XmlEvent> plan = planner.connect(reader, writer);
+    Enumerator<XmlEvent> reader = XmlFactory.instance().createXmlReader(new FileInputStream("src/test/resources/test.xsd"));
+    Iteratee<XmlEvent,?> writer = new TestPrintConsumer<XmlEvent>();
+    Plan2<XmlEvent,?> plan = factory.createPlan(reader, writer);
     System.out.println("===Running Plan===");
-    Result<XmlEvent> r = plan.run();
+    Plan2.RunResult<XmlEvent,?> r = plan.run();
     System.out.println("===Issues===");
-    for(Issue issue : r.getIssues()) {
+    for(Issue issue : r.allIssues()) {
       System.out.println(issue);
     }
+    assertTrue(r.statusCode().isSuccess());
   }
 }

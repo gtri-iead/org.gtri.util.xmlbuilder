@@ -30,7 +30,7 @@ import org.gtri.util.iteratee.api.ImmutableDiagnosticLocator;
 
 /**
  *
- * @author Lance
+ * @author lance.gatlin@gmail.com
  */
 public interface XmlEvent {
   ImmutableDiagnosticLocator locator();
