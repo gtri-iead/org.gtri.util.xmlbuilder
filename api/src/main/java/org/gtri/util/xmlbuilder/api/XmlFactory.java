@@ -34,7 +34,25 @@ import org.gtri.util.iteratee.api.Iteratee;
 public interface XmlFactory {
   
   public static interface XMLStreamReaderFactory {
-    XMLStreamReader create() throws XMLStreamException;
+    static final class Result {
+      private final XMLStreamReader reader;
+      private final int totalByteSize;
+
+      public Result(XMLStreamReader reader, int totalByteSize) {
+        this.reader = reader;
+        this.totalByteSize = totalByteSize;
+      }
+
+      public XMLStreamReader reader() {
+        return reader;
+      }
+
+      public int totalByteSize() {
+        return totalByteSize;
+      }
+      
+    }
+    Result create() throws XMLStreamException;
   }
   
   public static interface XMLStreamWriterFactory {
