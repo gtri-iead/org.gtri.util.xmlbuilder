@@ -11,16 +11,6 @@ import org.gtri.util.xmlbuilder.api
  */
 case class XmlFileLocator(charOffset : Int, columnNumber : Int, lineNumber : Int, publicId : String, systemId : String) extends api.XmlFileLocator {
 
-  def getCharOffset = charOffset
-
-  def getColumnNumber = columnNumber
-
-  def getLineNumber = lineNumber
-
-  def getPublicId = publicId
-
-  def getSystemId = systemId
-
   override def toString = {
     val s = new StringBuilder
     s.append('[')
