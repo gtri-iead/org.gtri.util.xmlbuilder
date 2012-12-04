@@ -28,12 +28,19 @@ import org.gtri.util.iteratee.api.Enumerator;
 import org.gtri.util.iteratee.api.Iteratee;
 
 /**
- *
+ * An interface for a factory object that can be used to create XMLReader and
+ * XMLWriter objects.
+ * 
  * @author lance.gatlin@gmail.com
  */
 public interface XmlFactory {
-  
+  /**
+   * An interface for a factory that creates XMLStreamReaders
+   */
   public static interface XMLStreamReaderFactory {
+    /**
+     * The immutable result of the create method
+     */
     static final class Result {
       private final XMLStreamReader reader;
       private final int totalByteSize;
@@ -52,14 +59,38 @@ public interface XmlFactory {
       }
       
     }
+    /**
+     * Create an XMLStreamReader
+     * @return immutable result
+     * @throws XMLStreamException 
+     */
     Result create() throws XMLStreamException;
   }
   
+  /**
+   * An interface for a factory to create XMLStreamWriters
+   */
   public static interface XMLStreamWriterFactory {
+    /**
+     * Create an XMLStreamWriter
+     * @return
+     * @throws XMLStreamException 
+     */
     XMLStreamWriter create() throws XMLStreamException;
   }
   
+  /**
+   * Create an XMLReader
+   * @param factory to utilize to create the XMLStreamReader
+   * @param chunkSize the size of the output buffers
+   * @return an XMLReader
+   */
   Enumerator<XmlEvent> createXmlReader(XMLStreamReaderFactory factory, int chunkSize);
   
+  /**
+   * Create an XMLWriter
+   * @param factory to utilize to create the XMLStreamWriter
+   * @return an XMLWriter
+   */
   Iteratee<XmlEvent,?> createXmlWriter(XMLStreamWriterFactory factory);  
 }
