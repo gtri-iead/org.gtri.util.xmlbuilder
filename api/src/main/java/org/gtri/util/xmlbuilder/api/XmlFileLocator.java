@@ -33,25 +33,25 @@ public interface XmlFileLocator extends ImmutableDiagnosticLocator {
    * Get the character offset
    * @return the character offset
    */
-  int getCharOffset();
+  int charOffset();
   /**
    * Get the column number
    * @return the column number
    */
-  int getColumnNumber();
+  int columnNumber();
   /**
    * Get the line number
    * @return the line number
    */
-  int getLineNumber();
+  int lineNumber();
   /**
    * Get the public identifier
    * @return the public identifier
    */
-  String getPublicId();
+  String publicId();
   /**
    * Get the system identifier
    * @return the system identifier
    */
-  String getSystemId();
+  String systemId();
 }
