@@ -22,14 +22,23 @@
 
 package org.gtri.xmlbuilder;
 
+import difflib.Delta;
+import difflib.DiffUtils;
+import difflib.Patch;
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.ArrayList;
 import javax.xml.stream.XMLStreamException;
 import org.gtri.util.iteratee.api.*;
 import org.gtri.util.iteratee.impl.test.TestPrintConsumer;
 import org.gtri.util.iteratee.IterateeFactory;
-import org.gtri.util.iteratee.api.Plan2.State.Result;
 import org.gtri.util.xmlbuilder.XmlFactory;
 import org.gtri.util.xmlbuilder.api.XmlEvent;
 import org.junit.After;
@@ -38,7 +47,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import scala.Unit;
 
 /**
  *
@@ -67,7 +75,7 @@ public class XmlTests {
   }
 
   @Test
-  public void testWriteXml() throws XMLStreamException, FileNotFoundException {
+  public void testWriteXml() throws XMLStreamException, FileNotFoundException, IOException {
     System.out.println("===TEST WRITE XML===");
     System.out.println("===Building Plan===");
     Enumerator<XmlEvent> reader = XmlFactory.instance().createXmlReader(new FileInputStream("src/test/resources/test.xsd"),1);
@@ -88,7 +96,9 @@ public class XmlTests {
 //      System.out.println(issue);
 //    }
     assertTrue(lastResult.next().statusCode().isSuccess());
+    assertTrue(streamsAreEqual(new FileInputStream("src/test/resources/test.xsd"), new FileInputStream("target/test.out.xsd")));
   }
+  
   @Test
   public void testPrintXml() throws XMLStreamException, FileNotFoundException {
     System.out.println("===TEST PRINT XML===");
@@ -104,4 +114,40 @@ public class XmlTests {
     }
     assertTrue(r.statusCode().isSuccess());
   }
+
+  public class LinesOfText extends ArrayList<String> {
+
+    LinesOfText(final String filename) throws IOException, FileNotFoundException {
+      readLines(new FileReader(filename));
+    }
+
+    LinesOfText(final InputStream in) throws IOException {
+      readLines(new InputStreamReader(in));
+    }
+
+    private void readLines(final Reader r) throws IOException {
+      String line = "";
+      final BufferedReader in = new BufferedReader(r);
+      while ((line = in.readLine()) != null) {
+        this.add(line);
+      }
+    }
+  }
+  
+  boolean streamsAreEqual(final InputStream in, final InputStream compare) throws FileNotFoundException, IOException {
+      /*
+       * COMPARE the first output to the second
+       */
+      final LinesOfText l1 = new LinesOfText(in);
+      final LinesOfText l2 = new LinesOfText(compare);
+
+      Patch patch = DiffUtils.diff(l1, l2);
+
+      for(final Delta delta : patch.getDeltas()) {
+        System.out.println(delta.getOriginal());
+        System.out.println(delta.getRevised());
+        System.out.println("");
+      }
+      return patch.getDeltas().isEmpty();
+    }
 }

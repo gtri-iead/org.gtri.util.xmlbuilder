@@ -48,7 +48,9 @@ class XmlReader(factory : XMLStreamReaderFactory, val chunkSize : Int = 256) ext
     Cont(result.reader(), new Progress(0,0,result.totalByteSize))
   }
 
-  case class Cont(reader : XMLStreamReader, val progress : Progress) extends Enumerators.Cont[XmlEvent] {
+  case class Cont(reader : XMLStreamReader, val progress : Progress) extends Enumerator.State[XmlEvent] {
+
+    def statusCode = if(reader.hasNext) StatusCode.CONTINUE else StatusCode.SUCCESS
 
     def step() = {
       // Note: may exceed buffer size due to peek - this shouldn't matter downstream though
