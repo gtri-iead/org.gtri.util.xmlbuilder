@@ -18,5 +18,236 @@
         <xs:documentation>asdf</xs:documentation>
     </xs:annotation>
     <xs:import namespace="http://testy.test2.test2" schemaLocation=".../somewhere"/>
-
+    <!-- Redefine example and test -->
+    <xs:redefine schemaLocation="test_1.xsd">
+        <xs:simpleType name="DressSizeType">
+            <xs:restriction base="DressSizeType">
+                <xs:minInclusive value="2"/>
+                <xs:maxInclusive value="16"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:redefine>
+    <xs:element name="newSize" type="DressSizeType"/>
+    <xs:simpleType final="#all" name="name">
+        <xs:restriction base="xs:string"/>
+    </xs:simpleType>
+    <xs:element name="name" type="xs:string"/>
+    <xs:complexType abstract="false" mixed="false" name="animal">
+        <xs:annotation/>
+        <xs:sequence>
+            <xs:element ref="name"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType abstract="false" mixed="false" name="dog">
+        <xs:complexContent mixed="false">
+            <xs:restriction base="animal"/>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="asdf" type="dog"/>
+    <xs:attribute name="mybaseattribute">
+        <xs:simpleType>
+            <xs:restriction base="xs:integer">
+                <xs:maxInclusive value="1000"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+    <xs:complexType name="myComplexType">
+        <xs:attribute ref="mybaseattribute"/>
+    </xs:complexType>
+    <xs:complexType name="address">
+        <xs:sequence>
+            <xs:element name="street" type="xs:string"/>
+            <xs:element name="city" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="USAddress">
+        <xs:complexContent>
+            <xs:extension base="address">
+                <xs:sequence>
+                    <xs:element name="state" type="xs:string"/>
+                </xs:sequence>
+                <xs:attribute fixed="US" name="country" type="xs:string"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="selected"/>
+    <xs:element name="unselected"/>
+    <xs:element name="dimpled"/>
+    <xs:element name="perforated"/>
+    <xs:complexType name="chadState">
+        <xs:choice maxOccurs="1" minOccurs="1">
+            <xs:element ref="selected"/>
+            <xs:element ref="unselected"/>
+            <xs:element ref="dimpled"/>
+            <xs:element ref="perforated"/>
+        </xs:choice>
+    </xs:complexType>
+    <xs:element name="person">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="firstname" type="xs:string"/>
+                <xs:element name="lastname" type="xs:string"/>
+                <xs:any minOccurs="0" namespace="##any" processContents="lax"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:attribute name="fontsize">
+        <xs:simpleType>
+            <xs:union memberTypes="fontbynumber fontbystringname"/>
+        </xs:simpleType>
+    </xs:attribute>
+    <xs:simpleType name="fontbynumber">
+        <xs:restriction base="xs:positiveInteger">
+            <xs:maxInclusive value="72"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="fontbystringname">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="small"/>
+            <xs:enumeration value="medium"/>
+            <xs:enumeration value="large"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="test1">
+        <xs:restriction base="xs:positiveInteger">
+            <xs:minInclusive value="1"/>
+            <xs:maxInclusive value="10"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="test2">
+        <xs:restriction base="xs:positiveInteger">
+            <xs:minExclusive value="1"/>
+            <xs:maxExclusive value="10"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="listOfIntegers">
+        <xs:list itemType="xs:integer"/>
+    </xs:simpleType>
+    <xs:element name="address">
+        <xs:simpleType>
+            <xs:restriction base="xs:string">
+                <xs:whiteSpace value="preserve"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:element>
+    <xs:simpleType name="testDigits">
+        <xs:restriction base="xs:decimal">
+            <xs:totalDigits value="8"/>
+            <xs:fractionDigits value="2"/>
+            <xs:minInclusive value="-999999.99"/>
+            <xs:maxInclusive value="999999.99"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:element name="testPattern">
+        <xs:simpleType>
+            <xs:restriction base="xs:string">
+                <xs:pattern value="[a-z]"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:element>
+    <xs:element name="testLength">
+        <xs:simpleType>
+            <xs:restriction base="xs:string">
+                <xs:length value="8"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:element>
+    <xs:element name="testMinMaxLength">
+        <xs:simpleType>
+            <xs:restriction base="xs:string">
+                <xs:minLength value="5"/>
+                <xs:maxLength value="8"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:element>
+    <xs:element name="testAnyAttribute">
+        <xs:complexType>
+            <xs:simpleContent>
+                <xs:extension base="xs:string">
+                    <xs:anyAttribute namespace="##targetNamespace"/>
+                </xs:extension>
+            </xs:simpleContent>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="testAll">
+        <xs:complexType>
+            <xs:all>
+                <xs:element name="firstname" type="xs:string"/>
+                <xs:element name="lastname" type="xs:string"/>
+            </xs:all>
+        </xs:complexType>
+    </xs:element>
+    <!-- Tests for Unique, Field, Selector -->
+    <xs:complexType name="customerOrderType">
+        <xs:sequence>
+            <xs:element maxOccurs="unbounded" minOccurs="0" name="item">
+                <xs:complexType>
+                    <xs:attribute name="itemID" type="xs:string"/>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="CustomerID" type="xs:string"/>
+    </xs:complexType>
+    <xs:element name="ordersByCustomer">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element maxOccurs="unbounded"
+                        minOccurs="0"
+                        name="customerOrders"
+                        type="customerOrderType"/>
+            </xs:sequence>
+        </xs:complexType>
+        <xs:unique name="oneCustomerOrdersforEachCustomerID">
+            <xs:selector xpath="customerOrders"/>
+            <xs:field xpath="@CustomerID"/>
+        </xs:unique>
+    </xs:element>
+    <!-- Tests for Key and KeyRef -->
+    <xs:element name="testKeyAndKeyRef">
+        <xs:complexType mixed="true">
+            <xs:sequence>
+                <xs:element name="referenced">
+                    <xs:complexType>
+                        <xs:attribute name="id" type="xs:string"/>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="owner">
+                    <xs:complexType>
+                        <xs:attribute name="id" type="xs:string"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+        <xs:key name="aKey">
+            <xs:selector xpath="owner"/>
+            <xs:field xpath="@id"/>
+        </xs:key>
+        <xs:keyref name="aKeyRef" refer="aKey">
+            <xs:selector xpath="referenced"/>
+            <xs:field xpath="@id"/>
+        </xs:keyref>
+    </xs:element>
+    <xs:notation name="gif" public="image/gif" system="view.exe"/>
+    <!-- Tests for AttributeGroup and AttributeGroupUse -->
+    <xs:attributeGroup name="personattr">
+        <xs:attribute name="attr1" type="xs:string"/>
+        <xs:attribute name="attr2" type="xs:integer"/>
+    </xs:attributeGroup>
+    <xs:complexType mixed="true" name="person">
+        <xs:attributeGroup ref="personattr"/>
+    </xs:complexType>
+    <!-- Tests for Group and GroupUse -->
+    <xs:group name="custGroup">
+        <xs:sequence>
+            <xs:element name="customer" type="xs:string"/>
+            <xs:element name="orderdetails" type="xs:string"/>
+            <xs:element name="billto" type="xs:string"/>
+            <xs:element name="shipto" type="xs:string"/>
+        </xs:sequence>
+    </xs:group>
+    <xs:element name="order" type="ordertype"/>
+    <xs:complexType name="ordertype">
+        <xs:group ref="custGroup"/>
+        <xs:attribute name="status" type="xs:string"/>
+    </xs:complexType>
 </xs:schema>
