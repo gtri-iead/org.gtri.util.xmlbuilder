@@ -45,7 +45,7 @@ import org.gtri.util.iteratee.impl.ImmutableBuffers.Conversions._
 class XmlWriter(factory : XMLStreamWriterFactory) extends Iteratee[XmlEvent, Unit] {
   def initialState =  Cont(factory.create(), Nil)
 
-  case class Cont(writer : XMLStreamWriter, stack : List[XmlElement]) extends Iteratees.Cont[XmlEvent, Unit] {
+  case class Cont(writer : XMLStreamWriter, stack : List[XmlElement]) extends Iteratees.ContState[XmlEvent, Unit] {
     def apply(buffer : ImmutableBuffer[XmlEvent]) = {
       val (newStack, newIssues) = buffer.foldLeft((stack, List[Issue]()))(writeXmlEvent)
       Result(
@@ -57,7 +57,7 @@ class XmlWriter(factory : XMLStreamWriterFactory) extends Iteratee[XmlEvent, Uni
     def endOfInput() = {
       writer.flush()
       writer.close()
-      Result(Success())
+      Result(SuccessState())
     }
 
     private def writeXmlEvent(accTuple : (List[XmlElement], List[Issue]), xmlEvent: XmlEvent) : (List[XmlElement], List[Issue]) = {

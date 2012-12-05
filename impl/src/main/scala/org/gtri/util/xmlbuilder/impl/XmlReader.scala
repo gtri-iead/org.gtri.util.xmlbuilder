@@ -76,7 +76,7 @@ class XmlReader(factory : XMLStreamReaderFactory, val chunkSize : Int = 256) ext
       if(buffer.nonEmpty) {
         Result(Cont(reader, nextProgress), collection.immutable.Vector(buffer: _*), ImmutableBuffers.empty)
       } else {
-        Result(Success(nextProgress), ImmutableBuffers.empty, ImmutableBuffers.empty)
+        Result(SuccessState(nextProgress), ImmutableBuffers.empty, ImmutableBuffers.empty)
       }
     }
 
