@@ -25,6 +25,7 @@ package org.gtri.util.xmlbuilder.impl
 import org.gtri.util.iteratee.api.{ImmutableBuffer, Iteratee, Issue}
 import org.gtri.util.iteratee.impl.{ImmutableBuffers, Iteratees}
 import org.gtri.util.iteratee.impl.Iteratees._
+import org.gtri.util.iteratee.impl.Iteratees.unbuffered._
 import org.gtri.util.iteratee.impl.Issues.Warning
 import org.gtri.util.xsddatatypes.XsdQName.NamespaceURIToPrefixResolver
 import org.gtri.util.xsddatatypes.{XsdNCName, XsdAnyURI}
@@ -45,23 +46,29 @@ import org.gtri.util.iteratee.impl.ImmutableBuffers.Conversions._
 class XmlWriter(factory : XMLStreamWriterFactory) extends Iteratee[XmlEvent, Unit] {
   def initialState =  Cont(factory.create(), Nil)
 
-  case class Cont(writer : XMLStreamWriter, stack : List[XmlElement]) extends Iteratees.ContState[XmlEvent, Unit] {
-    def apply(buffer : ImmutableBuffer[XmlEvent]) = {
-      val (newStack, newIssues) = buffer.foldLeft((stack, List[Issue]()))(writeXmlEvent)
-      Result(
-        next = Cont(writer, newStack),
-        issues = newIssues
-      )
+//  case class Cont(writer : XMLStreamWriter, stack : List[XmlElement]) extends Iteratees.ContState[XmlEvent, Unit] {
+  case class Cont(writer : XMLStreamWriter, stack : List[XmlElement]) extends BaseCont[XmlEvent, Unit] {
+
+//    def apply(buffer : ImmutableBuffer[XmlEvent]) = {
+//      val (newStack, newIssues) = buffer.foldLeft((stack, List[Issue]()))(writeXmlEvent)
+//      Result(
+//        next = Cont(writer, newStack),
+//        issues = newIssues
+//      )
+//    }
+
+    def apply(xmlEvent: XmlEvent) = {
+      val (newStack, issues) = writeXmlEvent(xmlEvent, stack)
+      Result(next = Cont(writer, newStack), issues = issues)
     }
 
     def endOfInput() = {
       writer.flush()
       writer.close()
-      Result(SuccessState())
+      Success()
     }
 
-    private def writeXmlEvent(accTuple : (List[XmlElement], List[Issue]), xmlEvent: XmlEvent) : (List[XmlElement], List[Issue]) = {
-      val (stack, issues) = accTuple
+    private def writeXmlEvent(xmlEvent : XmlEvent, stack : List[XmlElement]) : (List[XmlElement], List[Issue]) = {
       xmlEvent match {
         case e:StartXmlDocumentEvent => {
           writer.writeStartDocument()
@@ -124,7 +131,7 @@ class XmlWriter(factory : XMLStreamWriterFactory) extends Iteratee[XmlEvent, Uni
         }
         case e:XmlEvent => {
           val issue = Warning("Ignoring invalid XmlEvent '" + e.toString + "'", e.locator)
-          (stack, issue :: issues)
+          (stack, List(issue))
         }
       }
     }
