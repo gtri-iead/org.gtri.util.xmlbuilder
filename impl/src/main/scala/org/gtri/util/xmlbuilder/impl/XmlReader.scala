@@ -29,10 +29,9 @@ import org.gtri.util.xmlbuilder.api.XmlEvent
 import org.gtri.util.xmlbuilder.api.XmlFactory.XMLStreamReaderFactory
 import org.gtri.util.iteratee.api._
 import scala.Some
-import org.gtri.util.iteratee.impl.{Enumerators, ImmutableBuffers}
 import org.gtri.util.iteratee.impl.Enumerators._
 
-import org.gtri.util.iteratee.impl.ImmutableBuffers.Conversions._
+import org.gtri.util.iteratee.impl.ImmutableBufferConversions._
 import annotation.tailrec
 
 /**
@@ -55,11 +54,13 @@ class XmlReader(factory : XMLStreamReaderFactory, val chunkSize : Int = 256) ext
     def step() = {
       // Note: may exceed buffer size due to peek - this shouldn't matter downstream though
       val buffer = new collection.mutable.ArrayBuffer[XmlEvent](chunkSize)
+      // Fill buffer
       while(buffer.size < chunkSize && reader.hasNext) {
         for(event <- nextEvents().reverse) {
           buffer.append(event)
         }
       }
+      // Calc next progress if possible
       val nextProgress = {
         if(progress.totalItemCount > 0) {
           val charOffset = reader.getLocation.getCharacterOffset
@@ -73,10 +74,12 @@ class XmlReader(factory : XMLStreamReaderFactory, val chunkSize : Int = 256) ext
           Progress.empty
         }
       }
-      if(buffer.nonEmpty) {
-        Result(Cont(reader, nextProgress), collection.immutable.Vector(buffer: _*), ImmutableBuffers.empty)
+      // If buffer is empty we are done
+      if(buffer.isEmpty) {
+        Success(nextProgress)
       } else {
-        Result(Success(nextProgress), ImmutableBuffers.empty, ImmutableBuffers.empty)
+        val immutableCopyOfBuffer : IndexedSeq[XmlEvent] = buffer.toIndexedSeq
+        Result(Cont(reader, nextProgress), immutableCopyOfBuffer)
       }
     }
 

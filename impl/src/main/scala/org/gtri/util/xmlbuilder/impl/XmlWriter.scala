@@ -23,9 +23,7 @@
 package org.gtri.util.xmlbuilder.impl
 
 import org.gtri.util.iteratee.api.{ImmutableBuffer, Iteratee, Issue}
-import org.gtri.util.iteratee.impl.{ImmutableBuffers, Iteratees}
 import org.gtri.util.iteratee.impl.Iteratees._
-import org.gtri.util.iteratee.impl.Iteratees.unbuffered._
 import org.gtri.util.iteratee.impl.Issues.Warning
 import org.gtri.util.xsddatatypes.XsdQName.NamespaceURIToPrefixResolver
 import org.gtri.util.xsddatatypes.{XsdNCName, XsdAnyURI}
@@ -34,7 +32,7 @@ import org.gtri.util.xmlbuilder.api.XmlEvent
 import org.gtri.util.xmlbuilder.api.XmlFactory.XMLStreamWriterFactory
 import javax.xml.stream.XMLStreamWriter
 import javax.xml.XMLConstants
-import org.gtri.util.iteratee.impl.ImmutableBuffers.Conversions._
+import org.gtri.util.iteratee.impl.ImmutableBufferConversions._
 
 /**
  * Created with IntelliJ IDEA.
@@ -46,16 +44,7 @@ import org.gtri.util.iteratee.impl.ImmutableBuffers.Conversions._
 class XmlWriter(factory : XMLStreamWriterFactory) extends Iteratee[XmlEvent, Unit] {
   def initialState =  Cont(factory.create(), Nil)
 
-//  case class Cont(writer : XMLStreamWriter, stack : List[XmlElement]) extends Iteratees.ContState[XmlEvent, Unit] {
-  case class Cont(writer : XMLStreamWriter, stack : List[XmlElement]) extends BaseCont[XmlEvent, Unit] {
-
-//    def apply(buffer : ImmutableBuffer[XmlEvent]) = {
-//      val (newStack, newIssues) = buffer.foldLeft((stack, List[Issue]()))(writeXmlEvent)
-//      Result(
-//        next = Cont(writer, newStack),
-//        issues = newIssues
-//      )
-//    }
+  case class Cont(writer : XMLStreamWriter, stack : List[XmlElement]) extends SingleItemCont[XmlEvent, Unit] {
 
     def apply(xmlEvent: XmlEvent) = {
       val (newStack, issues) = writeXmlEvent(xmlEvent, stack)
