@@ -22,9 +22,8 @@
 
 package org.gtri.util.xmlbuilder.impl
 
-import org.gtri.util.iteratee.api.{ImmutableBuffer, Iteratee, Issue}
+import org.gtri.util.iteratee.api.{ImmutableBuffer, Iteratee, Issue, Issues}
 import org.gtri.util.iteratee.impl.Iteratees._
-import org.gtri.util.iteratee.impl.Issues.Warning
 import org.gtri.util.xsddatatypes.XsdQName.NamespaceURIToPrefixResolver
 import org.gtri.util.xsddatatypes.{XsdNCName, XsdAnyURI}
 import annotation.tailrec
@@ -119,7 +118,7 @@ class XmlWriter(factory : XMLStreamWriterFactory) extends Iteratee[XmlEvent, Uni
           (stack, Nil)
         }
         case e:XmlEvent => {
-          val issue = Warning("Ignoring invalid XmlEvent '" + e.toString + "'", e.locator)
+          val issue = Issues.inputWarning("Ignoring invalid XmlEvent '" + e.toString + "'", e.locator)
           (stack, List(issue))
         }
       }
