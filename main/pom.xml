@@ -3,10 +3,10 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.gtri.util</groupId>
-  <artifactId>xmlbuilder.main</artifactId>
+  <artifactId>xmlbuilder.main_2.10</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
-  <name>xmlbuilder.main</name>
+  <name>xmlbuilder.main_2.10</name>
   
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -20,12 +20,12 @@
     </dependency>                
     <dependency>
       <groupId>org.gtri.util</groupId>
-      <artifactId>xmlbuilder.impl_2.9.2</artifactId>
+      <artifactId>xmlbuilder.impl_2.10.0-RC5</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>                
     <dependency>
       <groupId>org.gtri.util</groupId>
-      <artifactId>iteratee.main_2.9.2</artifactId>
+      <artifactId>iteratee.main_2.10.0-RC5</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>                
     <dependency>
