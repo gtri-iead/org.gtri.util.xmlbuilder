@@ -38,26 +38,22 @@ import org.gtri.util.xmlbuilder.api
  * Time: 4:45 AM
  * To change this template use File | Settings | File Templates.
  */
-//sealed trait XmlEvent {
-//  def locator : XmlFileLocator
-//  def pushTo(contract : XmlContract)
-//}
 
-case class StartXmlDocumentEvent(encoding : String, version : String, isStandAlone : Boolean, characterEncodingScheme : String, locator : XmlFileLocator) extends XmlEvent {
+case class StartXmlDocumentEvent(encoding : String, version : String, isStandAlone : Boolean, characterEncodingScheme : String, locator : ImmutableDiagnosticLocator) extends XmlEvent {
   def pushTo(contract: XmlContract) { }
 }
 
-case class EndXmlDocumentEvent(locator : XmlFileLocator) extends XmlEvent {
+case class EndXmlDocumentEvent(locator : ImmutableDiagnosticLocator) extends XmlEvent {
   def pushTo(contract: XmlContract) {}
 }
 
-case class AddXmlCommentEvent(comment : String, locator : XmlFileLocator) extends XmlEvent {
+case class AddXmlCommentEvent(comment : String, locator : ImmutableDiagnosticLocator) extends XmlEvent {
   def pushTo(contract: XmlContract) {
     contract.addXmlComment(comment)
   }
 }
 
-case class AddXmlElementEvent(element : XmlElement, locator : XmlFileLocator) extends XmlEvent {
+case class AddXmlElementEvent(element : XmlElement, locator : ImmutableDiagnosticLocator) extends XmlEvent {
   def pushTo(contract: XmlContract) {
     val prefixToNamespaceURIMap = {
       val builder = ImmutableMap.builder[XsdNCName, XsdAnyURI]()
@@ -77,13 +73,13 @@ case class AddXmlElementEvent(element : XmlElement, locator : XmlFileLocator) ex
 
   }
 }
-case class EndXmlElementEvent(qName : XsdQName, locator : XmlFileLocator) extends XmlEvent {
+case class EndXmlElementEvent(qName : XsdQName, locator : ImmutableDiagnosticLocator) extends XmlEvent {
   def pushTo(contract: XmlContract) {
     contract.endXmlElement()
   }
 
 }
-case class AddXmlTextEvent(text : String, locator : XmlFileLocator) extends XmlEvent {
+case class AddXmlTextEvent(text : String, locator : ImmutableDiagnosticLocator) extends XmlEvent {
   def pushTo(contract: XmlContract) {
     contract.addXmlText(text)
   }

@@ -1,3 +1,10 @@
-/api/target/
-/impl/target/
-/main/target/
+logs
+project/project
+project/target
+target
+tmp
+.idea
+.idea_modules
+*~
+.DS_Store
+lib
