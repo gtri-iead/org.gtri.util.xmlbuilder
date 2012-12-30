@@ -28,7 +28,6 @@ import org.gtri.util.xsddatatypes._
 import org.gtri.util.xmlbuilder.api.XmlEvent
 import org.gtri.util.xmlbuilder.api.XmlFactory.XMLStreamReaderFactory
 import org.gtri.util.iteratee.api._
-import scala.Some
 import org.gtri.util.iteratee.impl.Enumerators._
 
 import org.gtri.util.iteratee.impl.ImmutableBufferConversions._
@@ -41,7 +40,7 @@ import annotation.tailrec
  * Time: 6:49 PM
  * To change this template use File | Settings | File Templates.
  */
-class XmlReader(factory : XMLStreamReaderFactory, val chunkSize : Int = 256) extends Enumerator[XmlEvent] {
+class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandlingCode = IssueHandlingCode.NORMAL, val chunkSize : Int = 256) extends Enumerator[XmlEvent] {
   def initialState() = {
     val result = factory.create()
     Cont(result.reader(), new Progress(0,0,result.totalByteSize))

@@ -22,7 +22,7 @@
 
 package org.gtri.util.xmlbuilder.impl
 
-import org.gtri.util.iteratee.api.{ImmutableBuffer, Iteratee, Issue, Issues}
+import org.gtri.util.iteratee.api._
 import org.gtri.util.iteratee.impl.Iteratees._
 import org.gtri.util.xsddatatypes.XsdQName.NamespaceURIToPrefixResolver
 import org.gtri.util.xsddatatypes.{XsdNCName, XsdAnyURI}
@@ -32,6 +32,7 @@ import org.gtri.util.xmlbuilder.api.XmlFactory.XMLStreamWriterFactory
 import javax.xml.stream.XMLStreamWriter
 import javax.xml.XMLConstants
 import org.gtri.util.iteratee.impl.ImmutableBufferConversions._
+import org.gtri.util.iteratee.impl.Iteratees.Result
 
 /**
  * Created with IntelliJ IDEA.
@@ -40,7 +41,7 @@ import org.gtri.util.iteratee.impl.ImmutableBufferConversions._
  * Time: 9:05 PM
  * To change this template use File | Settings | File Templates.
  */
-class XmlWriter(factory : XMLStreamWriterFactory) extends Iteratee[XmlEvent, Unit] {
+class XmlWriter(factory : XMLStreamWriterFactory, issueHandlingCode : IssueHandlingCode = IssueHandlingCode.NORMAL) extends Iteratee[XmlEvent, Unit] {
   def initialState =  Cont(factory.create(), Nil)
 
   case class Cont(writer : XMLStreamWriter, stack : List[XmlElement]) extends SingleItemCont[XmlEvent, Unit] {
