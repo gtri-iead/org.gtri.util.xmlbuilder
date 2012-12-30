@@ -60,7 +60,7 @@ public final class XmlFactory implements org.gtri.util.xmlbuilder.api.XmlFactory
 
   @Override
   public Enumerator<XmlEvent> createXmlReader(final XMLStreamReaderFactory factory, int chunkSize) {
-    return new XmlReader(factory, chunkSize);
+    return new XmlReader(factory, issueHandlingCode, chunkSize);
   }
   
   public Enumerator<XmlEvent> createXmlReader(final XMLStreamReaderFactory factory) {
@@ -141,7 +141,7 @@ public final class XmlFactory implements org.gtri.util.xmlbuilder.api.XmlFactory
   
   @Override
   public Iteratee<XmlEvent,?> createXmlWriter(final XMLStreamWriterFactory factory) {
-    return new XmlWriter(factory);
+    return new XmlWriter(factory, issueHandlingCode);
   }
   
   public Iteratee<XmlEvent,?> createXmlWriter(final OutputStream out) {

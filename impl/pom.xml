@@ -86,7 +86,7 @@
         </dependency>
         <dependency>
             <groupId>org.gtri.util</groupId>
-            <artifactId>iteratee.impl_2.10.0-RC5</artifactId>
+            <artifactId>iteratee.impl_2.10</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
