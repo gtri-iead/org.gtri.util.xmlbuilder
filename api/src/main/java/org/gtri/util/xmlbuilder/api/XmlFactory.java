@@ -21,6 +21,8 @@
 */
 package org.gtri.util.xmlbuilder.api;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
@@ -68,6 +70,14 @@ public interface XmlFactory {
   }
   
   /**
+   * Create a XMLStreamReaderFactory that caches an InputStream and creates
+   * XMLStreamReaders from the cache.
+   * @param in
+   * @return an XMLStreamReader that reads from a cache of the InputStream
+   */
+  public XMLStreamReaderFactory createXMLStreamReaderFactory(InputStream in);
+  
+  /**
    * An interface for a factory to create XMLStreamWriters
    */
   public static interface XMLStreamWriterFactory {
@@ -78,6 +88,18 @@ public interface XmlFactory {
      */
     XMLStreamWriter create() throws XMLStreamException;
   }
+  
+  /**
+   * Create an XMLStreamWriterFactory that will write to the OutputStream using
+   * the following formatting options:
+   *   ENCODING = UTF-8
+   *   INDENT = yes
+   *   INDENT_SPACES = 2
+   *   LINE_LENGTH = 80
+   * @param out
+   * @return 
+   */
+  public XMLStreamWriterFactory createXMLStreamWriterFactory(OutputStream out);
   
   /**
    * Create an XMLReader

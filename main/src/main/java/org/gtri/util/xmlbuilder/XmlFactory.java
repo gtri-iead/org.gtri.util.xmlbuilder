@@ -31,12 +31,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 import net.sf.saxon.s9api.Processor;
 import net.sf.saxon.s9api.SaxonApiException;
 import net.sf.saxon.s9api.Serializer;
 import org.gtri.util.iteratee.api.Enumerator;
+import org.gtri.util.iteratee.api.IssueHandlingCode;
 import org.gtri.util.iteratee.api.Iteratee;
 import org.gtri.util.xmlbuilder.api.XmlEvent;
 import org.gtri.util.xmlbuilder.impl.XmlReader;
@@ -47,9 +47,15 @@ import org.gtri.util.xmlbuilder.impl.XmlWriter;
  * @author lance.gatlin@gmail.com
  */
 public final class XmlFactory implements org.gtri.util.xmlbuilder.api.XmlFactory {
-  private XmlFactory() { }
-  public static final XmlFactory INSTANCE = new XmlFactory();
-  public static XmlFactory instance() { return INSTANCE; }
+  private final IssueHandlingCode issueHandlingCode;
+  
+  public XmlFactory(IssueHandlingCode _issueHandlingCode) { 
+    issueHandlingCode = _issueHandlingCode;
+  }
+  public XmlFactory() {
+    issueHandlingCode = IssueHandlingCode.NORMAL;
+  }
+  
   public static final int STD_CHUNK_SIZE = 256;
 
   @Override
@@ -77,6 +83,11 @@ public final class XmlFactory implements org.gtri.util.xmlbuilder.api.XmlFactory
   }
   
   public Enumerator<XmlEvent> createXmlReader(final InputStream in, int chunkSize) {
+    return createXmlReader(createXMLStreamReaderFactory(in), chunkSize);
+  }
+
+  @Override
+  public XMLStreamReaderFactory createXMLStreamReaderFactory(final InputStream in) {
     final Lazy<ByteArrayOutputStream> lazyBaos = new Lazy<ByteArrayOutputStream>() {
       @Override
       public ByteArrayOutputStream init() {
@@ -96,25 +107,18 @@ public final class XmlFactory implements org.gtri.util.xmlbuilder.api.XmlFactory
       }
     };
     
-    return createXmlReader(
-      new XMLStreamReaderFactory() {
+    return new XMLStreamReaderFactory() {
         @Override
-        public Result create() throws XMLStreamException {
+        public XMLStreamReaderFactory.Result create() throws XMLStreamException {
           byte[] content = lazyBaos.get().toByteArray();
           return new XMLStreamReaderFactory.Result(XMLInputFactory.newInstance().createXMLStreamReader(new ByteArrayInputStream(content)), content.length);
         }
-      }, 
-      chunkSize
-    );
-  }
-
-  @Override
-  public Iteratee<XmlEvent,?> createXmlWriter(final XMLStreamWriterFactory factory) {
-    return new XmlWriter(factory);
+      };
   }
   
-  public Iteratee<XmlEvent,?> createXmlWriter(final OutputStream out) {
-    return createXmlWriter(new XMLStreamWriterFactory(){ 
+  @Override
+  public XMLStreamWriterFactory createXMLStreamWriterFactory(final OutputStream out) {
+    return new XMLStreamWriterFactory(){ 
 
       @Override
       public XMLStreamWriter create() throws XMLStreamException {
@@ -132,8 +136,15 @@ public final class XmlFactory implements org.gtri.util.xmlbuilder.api.XmlFactory
         }
       }
       //        return XMLOutputFactory.newInstance().createXMLStreamWriter(out, "UTF-8");
-      
-      
-    });
+    };
+  }
+  
+  @Override
+  public Iteratee<XmlEvent,?> createXmlWriter(final XMLStreamWriterFactory factory) {
+    return new XmlWriter(factory);
+  }
+  
+  public Iteratee<XmlEvent,?> createXmlWriter(final OutputStream out) {
+    return createXmlWriter(createXMLStreamWriterFactory(out));
   }
 }

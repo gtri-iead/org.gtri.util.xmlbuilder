@@ -53,7 +53,8 @@ import static org.junit.Assert.*;
  * @author lance.gatlin@gmail.com
  */
 public class XmlTests {
-  IterateeFactory factory = new IterateeFactory();
+  IterateeFactory iterateeFactory = new IterateeFactory();
+  XmlFactory xmlFactory = new XmlFactory();
   
   public XmlTests() {
   }
@@ -78,9 +79,9 @@ public class XmlTests {
   public void testWriteXml() throws XMLStreamException, FileNotFoundException, IOException {
     System.out.println("===TEST WRITE XML===");
     System.out.println("===Building Plan===");
-    Enumerator<XmlEvent> reader = XmlFactory.instance().createXmlReader(new FileInputStream("src/test/resources/test.xsd"),1);
-    Iteratee<XmlEvent,?> writer = XmlFactory.instance().createXmlWriter(new FileOutputStream("target/test.out.xsd"));
-    Plan2<XmlEvent,?> plan = factory.createPlan(reader, writer);
+    Enumerator<XmlEvent> reader = xmlFactory.createXmlReader(new FileInputStream("src/test/resources/test.xsd"),1);
+    Iteratee<XmlEvent,?> writer = xmlFactory.createXmlWriter(new FileOutputStream("target/test.out.xsd"));
+    Plan2<XmlEvent,?> plan = iterateeFactory.createPlan(reader, writer);
     System.out.println("===Running Plan===");
     
     Plan2.State.Result<XmlEvent,?> lastResult = null;
@@ -103,9 +104,9 @@ public class XmlTests {
   public void testPrintXml() throws XMLStreamException, FileNotFoundException {
     System.out.println("===TEST PRINT XML===");
     System.out.println("===Building Plan===");
-    Enumerator<XmlEvent> reader = XmlFactory.instance().createXmlReader(new FileInputStream("src/test/resources/test.xsd"),1);
+    Enumerator<XmlEvent> reader = xmlFactory.createXmlReader(new FileInputStream("src/test/resources/test.xsd"),1);
     Iteratee<XmlEvent,?> writer = new TestPrintConsumer<XmlEvent>();
-    Plan2<XmlEvent,?> plan = factory.createPlan(reader, writer);
+    Plan2<XmlEvent,?> plan = iterateeFactory.createPlan(reader, writer);
     System.out.println("===Running Plan===");
     Plan2.RunResult<XmlEvent,?> r = plan.run();
     System.out.println("===Issues===");
