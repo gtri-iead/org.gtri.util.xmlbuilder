@@ -46,13 +46,22 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
     Cont(result.reader(), new Progress(0,0,result.totalByteSize))
   }
 
-  case class Cont(reader : XMLStreamReader, val progress : Progress) extends Enumerator.State[XmlEvent] {
+    case class Cont(reader : XMLStreamReader, val progress : Progress) extends Enumerator.State[XmlEvent] {
 
     def statusCode = if(reader.hasNext) StatusCode.CONTINUE else StatusCode.SUCCESS
 
     def step() = {
       // Note: may exceed buffer size due to peek - this shouldn't matter downstream though
       val buffer = new collection.mutable.ArrayBuffer[XmlEvent](chunkSize)
+      if(reader.getEventType == XMLStreamConstants.START_DOCUMENT) {
+        buffer.append(StartXmlDocumentEvent(
+          reader.getEncoding,
+          reader.getVersion,
+          reader.isStandalone,
+          reader.getCharacterEncodingScheme,
+          getLocatorFromReader
+        ))
+      }
       // Fill buffer
       while(buffer.size < chunkSize && reader.hasNext) {
         for(event <- nextEvents().reverse) {
@@ -85,41 +94,41 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
     // Gets the next event - if next event is an element will peek at next few elements to try to extract value
     // and will return the events it peeked at inaddition to the AddXmlElementEvent
     private def nextEvents() : List[XmlEvent] = {
-        if(reader.hasNext) {
-        reader.next match {
-          case XMLStreamConstants.START_DOCUMENT=> {
-            List(StartXmlDocumentEvent(
-              reader.getEncoding,
-              reader.getVersion,
-              reader.isStandalone,
-              reader.getCharacterEncodingScheme,
-              getLocatorFromReader
-            ))
+      if(reader.hasNext) {
+          reader.next match {
+//            case XMLStreamConstants.START_DOCUMENT=> {
+//              List(StartXmlDocumentEvent(
+//                reader.getEncoding,
+//                reader.getVersion,
+//                reader.isStandalone,
+//                reader.getCharacterEncodingScheme,
+//                getLocatorFromReader
+//              ))
+//            }
+            case XMLStreamConstants.END_DOCUMENT => {
+              List(EndXmlDocumentEvent(getLocatorFromReader))
+            }
+            case XMLStreamConstants.START_ELEMENT => {
+              val (element, peekQueue) = fetchElementFromReader()
+              peekQueue ::: AddXmlElementEvent(element, getLocatorFromReader) :: Nil
+            }
+            case XMLStreamConstants.END_ELEMENT => {
+              List(EndXmlElementEvent(getElementQNameFromReader, getLocatorFromReader))
+            }
+            case XMLStreamConstants.CHARACTERS => {
+              List(AddXmlTextEvent(reader.getText(), getLocatorFromReader))
+            }
+            case XMLStreamConstants.CDATA => {
+              List(AddXmlTextEvent(reader.getText(), getLocatorFromReader))
+            }
+            case XMLStreamConstants.COMMENT => {
+              List(AddXmlCommentEvent(reader.getText(), getLocatorFromReader))
+            }
+            case _ => nextEvents()
           }
-          case XMLStreamConstants.END_DOCUMENT => {
-            List(EndXmlDocumentEvent(getLocatorFromReader))
-          }
-          case XMLStreamConstants.START_ELEMENT => {
-            val (element, peekQueue) = fetchElementFromReader()
-            peekQueue ::: AddXmlElementEvent(element, getLocatorFromReader) :: Nil
-          }
-          case XMLStreamConstants.END_ELEMENT => {
-            List(EndXmlElementEvent(getElementQNameFromReader, getLocatorFromReader))
-          }
-          case XMLStreamConstants.CHARACTERS => {
-            List(AddXmlTextEvent(reader.getText(), getLocatorFromReader))
-          }
-          case XMLStreamConstants.CDATA => {
-            List(AddXmlTextEvent(reader.getText(), getLocatorFromReader))
-          }
-          case XMLStreamConstants.COMMENT => {
-            List(AddXmlCommentEvent(reader.getText(), getLocatorFromReader))
-          }
-          case _ => nextEvents()
+        } else {
+          Nil
         }
-      } else {
-        Nil
-      }
     }
 
     private def getElementQNameFromReader : XsdQName = {
