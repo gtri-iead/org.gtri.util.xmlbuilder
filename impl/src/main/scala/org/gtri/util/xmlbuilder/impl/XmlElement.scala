@@ -13,9 +13,11 @@ import org.gtri.util.xsddatatypes.XsdQName.NamespaceURIToPrefixResolver
 case class XmlElement(
   qName : XsdQName,
   value : Option[String],
-  attributes : Map[XsdQName, String],
-  prefixToNamespaceURIMap : Map[XsdNCName, XsdAnyURI]
+  attributes : Seq[(XsdQName, String)],
+  prefixes : Seq[(XsdNCName, XsdAnyURI)]
 ) extends NamespaceURIToPrefixResolver {
+  lazy val attributesMap = attributes.toMap
+  lazy val prefixToNamespaceURIMap = prefixes.toMap
   lazy val namespaceURIToPrefixMap = prefixToNamespaceURIMap.map(_.swap)
 
   def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) = {

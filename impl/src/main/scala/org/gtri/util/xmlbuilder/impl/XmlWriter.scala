@@ -92,13 +92,13 @@ class XmlWriter(factory : XMLStreamWriterFactory, issueHandlingCode : IssueHandl
           // Write attributes
           {
             // Note: order of attributes is meaningless however, to achieve a stable output, attributes are sorted
-            val sortedAttributes = e.element.attributes.keySet.toList.sortWith( _.getLocalName.toString < _.getLocalName.toString)
-            for(qName <- sortedAttributes) {
+//            val sortedAttributes = e.element.attributesMap.keySet.toList.sortWith( _.getLocalName.toString < _.getLocalName.toString)
+            for((qName,value) <- e.element.attributes) {
               val localName = qName.getLocalName.toString
               val nsURI = qName.getNamespaceURI.toString
               val optionPrefix = Option(qName.resolvePrefix(getNamespaceURIToPrefixResolver(newStack))).map { _.toString }
               val prefix = optionPrefix.getOrElse { XMLConstants.DEFAULT_NS_PREFIX }
-              val value = e.element.attributes(qName)
+//              val value = e.element.attributes(qName)
               writer.writeAttribute(prefix, nsURI, localName, value)
             }
           }
