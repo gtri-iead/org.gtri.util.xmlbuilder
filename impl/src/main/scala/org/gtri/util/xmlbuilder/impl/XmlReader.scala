@@ -41,27 +41,32 @@ import annotation.tailrec
  * To change this template use File | Settings | File Templates.
  */
 class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandlingCode = IssueHandlingCode.NORMAL, val chunkSize : Int = 256) extends Enumerator[XmlEvent] {
+  require(chunkSize > 0)
+
   def initialState() = {
     val result = factory.create()
     Cont(result.reader(), new Progress(0,0,result.totalByteSize))
   }
 
-    case class Cont(reader : XMLStreamReader, val progress : Progress) extends Enumerator.State[XmlEvent] {
+  case class Cont(reader : XMLStreamReader, val progress : Progress) extends Enumerator.State[XmlEvent] {
 
     def statusCode = if(reader.hasNext) StatusCode.CONTINUE else StatusCode.SUCCESS
 
     def step() = {
+      // TODO: what happens if reader fails?
+
       // Note: may exceed buffer size due to peek - this shouldn't matter downstream though
       val buffer = new collection.mutable.ArrayBuffer[XmlEvent](chunkSize)
-      if(reader.getEventType == XMLStreamConstants.START_DOCUMENT) {
-        buffer.append(StartXmlDocumentEvent(
-          reader.getEncoding,
-          reader.getVersion,
-          reader.isStandalone,
-          reader.getCharacterEncodingScheme,
-          getLocatorFromReader
-        ))
-      }
+//      if(reader.getEventType == XMLStreamConstants.START_DOCUMENT) {
+//        buffer.append(StartXmlDocumentEvent(
+//          reader.getEncoding,
+//          reader.getVersion,
+//          reader.isStandalone,
+//          reader.getCharacterEncodingScheme,
+//          getLocatorFromReader
+//        ))
+//        reader.next()
+//      }
       // Fill buffer
       while(buffer.size < chunkSize && reader.hasNext) {
         for(event <- nextEvents().reverse) {
@@ -94,41 +99,55 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
     // Gets the next event - if next event is an element will peek at next few elements to try to extract value
     // and will return the events it peeked at inaddition to the AddXmlElementEvent
     private def nextEvents() : List[XmlEvent] = {
-      if(reader.hasNext) {
-          reader.next match {
-//            case XMLStreamConstants.START_DOCUMENT=> {
-//              List(StartXmlDocumentEvent(
-//                reader.getEncoding,
-//                reader.getVersion,
-//                reader.isStandalone,
-//                reader.getCharacterEncodingScheme,
-//                getLocatorFromReader
-//              ))
-//            }
-            case XMLStreamConstants.END_DOCUMENT => {
-              List(EndXmlDocumentEvent(getLocatorFromReader))
-            }
-            case XMLStreamConstants.START_ELEMENT => {
-              val (element, peekQueue) = fetchElementFromReader()
-              peekQueue ::: AddXmlElementEvent(element, getLocatorFromReader) :: Nil
-            }
-            case XMLStreamConstants.END_ELEMENT => {
-              List(EndXmlElementEvent(getElementQNameFromReader, getLocatorFromReader))
-            }
-            case XMLStreamConstants.CHARACTERS => {
-              List(AddXmlTextEvent(reader.getText(), getLocatorFromReader))
-            }
-            case XMLStreamConstants.CDATA => {
-              List(AddXmlTextEvent(reader.getText(), getLocatorFromReader))
-            }
-            case XMLStreamConstants.COMMENT => {
-              List(AddXmlCommentEvent(reader.getText(), getLocatorFromReader))
-            }
-            case _ => nextEvents()
-          }
-        } else {
-          Nil
+      reader.getEventType() match {
+        case XMLStreamConstants.START_DOCUMENT=> {
+          val retv = List(StartXmlDocumentEvent(
+            reader.getEncoding,
+            reader.getVersion,
+            reader.isStandalone,
+            reader.getCharacterEncodingScheme,
+            getLocatorFromReader
+          ))
+          reader.next()
+          retv
         }
+        case XMLStreamConstants.END_DOCUMENT => {
+          val retv = List(EndXmlDocumentEvent(getLocatorFromReader))
+          reader.next()
+          retv
+        }
+        case XMLStreamConstants.START_ELEMENT => {
+          val (qName, attributes, prefixes) = getElementInfoFromReader()
+          val locator = getLocatorFromReader
+          reader.next()
+          val (value, peekQueue) = peekParseElementValue()
+          peekQueue :::
+            AddXmlElementEvent(XmlElement(qName, value, attributes.toMap, prefixes.toMap), locator) :: Nil
+        }
+        case XMLStreamConstants.END_ELEMENT => {
+          val retv = List(EndXmlElementEvent(getElementQNameFromReader, getLocatorFromReader))
+          reader.next()
+          retv
+        }
+        case XMLStreamConstants.CHARACTERS => {
+          val retv = List(AddXmlTextEvent(reader.getText(), getLocatorFromReader))
+          reader.next()
+          retv
+        }
+        case XMLStreamConstants.CDATA => {
+          val retv = List(AddXmlTextEvent(reader.getText(), getLocatorFromReader))
+          reader.next()
+          retv
+        }
+        case XMLStreamConstants.COMMENT => {
+          val retv = List(AddXmlCommentEvent(reader.getText(), getLocatorFromReader))
+          reader.next()
+          retv
+        }
+        case _ =>
+          reader.next()
+          nextEvents()
+      }
     }
 
     private def getElementQNameFromReader : XsdQName = {
@@ -139,8 +158,8 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
     }
 
 //    private def fetchElementFromReader(peekQueue : collection.mutable.Queue[XmlEvent]) : XmlElement = {
-    private def fetchElementFromReader() : (XmlElement, List[XmlEvent]) = {
-        val qName = getElementQNameFromReader
+    private def getElementInfoFromReader() : (XsdQName, Seq[(XsdQName, String)], Seq[(XsdNCName, XsdAnyURI)]) = {
+      val qName = getElementQNameFromReader
       val attributes = {
         for(i <- 0 until reader.getAttributeCount())
         yield {
@@ -161,9 +180,7 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
           prefix -> uri
         }
       }
-
-      val (value, peekQueue) = peekParseElementValue()
-      (XmlElement(qName, value, attributes.toMap, prefixes.toMap), peekQueue)
+      (qName, attributes, prefixes)
     }
 
     private def newXsdAnyURI(uri: String) = {

@@ -119,8 +119,11 @@ class XmlWriter(factory : XMLStreamWriterFactory, issueHandlingCode : IssueHandl
           (stack, Nil)
         }
         case e:XmlEvent => {
-          val issue = Issues.inputWarning("Ignoring invalid XmlEvent '" + e.toString + "'", e.locator)
-          (stack, List(issue))
+          val issues =
+            Issues.reportInputLocation(e.locator()) ::
+            Issues.inputWarning("Ignoring invalid XmlEvent '" + e.toString + "'") ::
+            Nil
+          (stack, issues)
         }
       }
     }
