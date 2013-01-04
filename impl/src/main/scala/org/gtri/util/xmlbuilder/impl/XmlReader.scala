@@ -127,13 +127,8 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
           val locator = getLocatorFromReader
           reader.next()
           val (value, peekQueue) = peekParseElementValue()
-          val metadata = XmlElement.Metadata(
-            orderedAttributes = Some(attributes),
-            orderedPrefixes = Some(prefixes),
-            locator = Some(locator)
-          )
           peekQueue :::
-            StartXmlElementEvent(XmlElement(qName, value, attributes.toMap, prefixes.toMap, Some(metadata)), locator) :: Nil
+            StartXmlElementEvent(XmlElement(qName, value, attributes, prefixes, locator), locator) :: Nil
         }
         case XMLStreamConstants.END_ELEMENT => {
           val retv = List(EndXmlElementEvent(getElementQNameFromReader, getLocatorFromReader))

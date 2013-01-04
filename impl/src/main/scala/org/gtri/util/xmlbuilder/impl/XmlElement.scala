@@ -56,4 +56,31 @@ object XmlElement {
     orderedPrefixes: Option[Seq[(XsdNCName,XsdAnyURI)]] = None,
     locator : Option[ImmutableDiagnosticLocator] = None
   )
+
+  def apply(
+    qName : XsdQName,
+    value : Option[String],
+    attributes : Seq[(XsdQName, String)],
+    prefixes : Seq[(XsdNCName, XsdAnyURI)]
+  ) = new XmlElement(
+    qName,
+    value,
+    attributes.toMap,
+    prefixes.toMap,
+    Some(Metadata(None, Some(attributes), Some(prefixes), None))
+  )
+
+  def apply(
+    qName : XsdQName,
+    value : Option[String],
+    attributes : Seq[(XsdQName, String)],
+    prefixes : Seq[(XsdNCName, XsdAnyURI)],
+    locator : ImmutableDiagnosticLocator
+  ) = new XmlElement(
+    qName,
+    value,
+    attributes.toMap,
+    prefixes.toMap,
+    Some(Metadata(None, Some(attributes), Some(prefixes), Some(locator)))
+  )
 }
