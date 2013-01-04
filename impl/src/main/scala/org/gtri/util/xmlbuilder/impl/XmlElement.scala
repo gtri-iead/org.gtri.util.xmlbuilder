@@ -20,15 +20,19 @@ case class XmlElement(
   metadata : Option[Metadata] = None
 ) extends NamespaceURIToPrefixResolver {
   lazy val orderedAttributes : Seq[(XsdQName, String)] = {
-    if(metadata.isDefined && metadata.get.orderedAttributes.isDefined) {
-      metadata.get.orderedAttributes.get
+    if(metadata.isDefined && metadata.get.attributesOrder.isDefined) {
+      metadata.get.attributesOrder.get.map({ 
+        qName => attributesMap.get(qName).map { value => (qName,value) }
+      }).flatten
     } else {
       attributesMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
     }
   }
   lazy val orderedPrefixes : Seq[(XsdNCName, XsdAnyURI)] = {
-    if(metadata.isDefined && metadata.get.orderedPrefixes.isDefined) {
-      metadata.get.orderedPrefixes.get
+    if(metadata.isDefined && metadata.get.prefixesOrder.isDefined) {
+      metadata.get.prefixesOrder.get.map({
+        prefix => prefixToNamespaceURIMap.get(prefix).map { uri => (prefix,uri) }
+      }).flatten
     } else {
       prefixToNamespaceURIMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
     }
@@ -51,9 +55,9 @@ case class XmlElement(
 
 object XmlElement {
   case class Metadata(
-    rawAttributeOrder: Option[Seq[String]] = None,
-    orderedAttributes: Option[Seq[(XsdQName,String)]] = None,
-    orderedPrefixes: Option[Seq[(XsdNCName,XsdAnyURI)]] = None,
+    rawAttributesOrder: Option[Seq[String]] = None,
+    attributesOrder: Option[Seq[XsdQName]] = None,
+    prefixesOrder: Option[Seq[XsdNCName]] = None,
     locator : Option[ImmutableDiagnosticLocator] = None
   )
 
@@ -67,7 +71,7 @@ object XmlElement {
     value,
     attributes.toMap,
     prefixes.toMap,
-    Some(Metadata(None, Some(attributes), Some(prefixes), None))
+    Some(Metadata(None, Some(attributes.map { _._1 }), Some(prefixes.map { _._1 }), None))
   )
 
   def apply(
@@ -81,6 +85,6 @@ object XmlElement {
     value,
     attributes.toMap,
     prefixes.toMap,
-    Some(Metadata(None, Some(attributes), Some(prefixes), Some(locator)))
+    Some(Metadata(None, Some(attributes.map { _._1 }), Some(prefixes.map { _._1 }), Some(locator)))
   )
 }
