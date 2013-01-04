@@ -53,7 +53,7 @@ case class AddXmlCommentEvent(comment : String, locator : ImmutableDiagnosticLoc
   }
 }
 
-case class AddXmlElementEvent(element : XmlElement, locator : ImmutableDiagnosticLocator) extends XmlEvent {
+case class StartXmlElementEvent(element : XmlElement, locator : ImmutableDiagnosticLocator) extends XmlEvent {
   def pushTo(contract: XmlContract) {
     val prefixToNamespaceURIMap = {
       val builder = ImmutableMap.builder[XsdNCName, XsdAnyURI]()
@@ -64,21 +64,20 @@ case class AddXmlElementEvent(element : XmlElement, locator : ImmutableDiagnosti
     }
     val attributes = {
       val builder = ImmutableMap.builder[XsdQName, String]()
-      for ((name, value) <- element.attributes) {
+      for ((name, value) <- element.attributesMap) {
         builder.put(name, value)
       }
       builder.build()
     }
     contract.addXmlElement(element.qName, element.value.orNull, attributes, prefixToNamespaceURIMap)
-
   }
 }
 case class EndXmlElementEvent(qName : XsdQName, locator : ImmutableDiagnosticLocator) extends XmlEvent {
   def pushTo(contract: XmlContract) {
     contract.endXmlElement()
   }
-
 }
+
 case class AddXmlTextEvent(text : String, locator : ImmutableDiagnosticLocator) extends XmlEvent {
   def pushTo(contract: XmlContract) {
     contract.addXmlText(text)

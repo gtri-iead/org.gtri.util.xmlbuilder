@@ -71,7 +71,7 @@ class XmlWriter(factory : XMLStreamWriterFactory, issueHandlingCode : IssueHandl
           writer.writeComment(e.comment)
           (stack, Nil)
         }
-        case e:AddXmlElementEvent => {
+        case e:StartXmlElementEvent => {
           val newStack = e.element :: stack
           // Start element
           val qName = e.element.qName
@@ -82,7 +82,7 @@ class XmlWriter(factory : XMLStreamWriterFactory, issueHandlingCode : IssueHandl
           writer.writeStartElement(prefix, localName, nsURI)
 
           // Write namespace prefixes
-          for((namespacePrefix, namespaceURI) <- e.element.prefixToNamespaceURIMap) {
+          for((namespacePrefix, namespaceURI) <- e.element.orderedPrefixes) {
             // Skip the prefix for the element
             if(prefix != namespacePrefix.toString) {
               writer.writeNamespace(namespacePrefix.toString, namespaceURI.toString)
@@ -93,7 +93,7 @@ class XmlWriter(factory : XMLStreamWriterFactory, issueHandlingCode : IssueHandl
           {
             // Note: order of attributes is meaningless however, to achieve a stable output, attributes are sorted
 //            val sortedAttributes = e.element.attributesMap.keySet.toList.sortWith( _.getLocalName.toString < _.getLocalName.toString)
-            for((qName,value) <- e.element.attributes) {
+            for((qName,value) <- e.element.orderedAttributes) {
               val localName = qName.getLocalName.toString
               val nsURI = qName.getNamespaceURI.toString
               val optionPrefix = Option(qName.resolvePrefix(getNamespaceURIToPrefixResolver(newStack))).map { _.toString }

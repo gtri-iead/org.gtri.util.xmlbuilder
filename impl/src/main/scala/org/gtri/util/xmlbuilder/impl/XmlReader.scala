@@ -32,6 +32,7 @@ import org.gtri.util.iteratee.impl.Enumerators._
 
 import org.gtri.util.iteratee.impl.ImmutableBufferConversions._
 import annotation.tailrec
+import org.gtri.util.xmlbuilder.impl.XmlElement.Metadata
 
 /**
  * Created with IntelliJ IDEA.
@@ -57,16 +58,6 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
 
       // Note: may exceed buffer size due to peek - this shouldn't matter downstream though
       val buffer = new collection.mutable.ArrayBuffer[XmlEvent](chunkSize)
-//      if(reader.getEventType == XMLStreamConstants.START_DOCUMENT) {
-//        buffer.append(StartXmlDocumentEvent(
-//          reader.getEncoding,
-//          reader.getVersion,
-//          reader.isStandalone,
-//          reader.getCharacterEncodingScheme,
-//          getLocatorFromReader
-//        ))
-//        reader.next()
-//      }
       // Fill buffer
       while(buffer.size < chunkSize && reader.hasNext) {
         for(event <- nextEvents().reverse) {
@@ -89,6 +80,7 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
       }
       // If buffer is empty we are done
       if(buffer.isEmpty) {
+        reader.close()
         Success(nextProgress)
       } else {
         val immutableCopyOfBuffer : IndexedSeq[XmlEvent] = buffer.toIndexedSeq
@@ -100,6 +92,20 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
     // and will return the events it peeked at inaddition to the AddXmlElementEvent
     private def nextEvents() : List[XmlEvent] = {
       reader.getEventType() match {
+//        case XMLStreamConstants.ATTRIBUTE => {
+//          val i = reader.getAttributeCount - 1
+//          println("getAttributeCount=" + reader.getAttributeCount)
+//          println("getAttributeLocalName=" + reader.getAttributeName(i))
+//          println("getAttributeCount=" + reader.getAttributeValue(i))
+//          nextEvents()
+//        }
+//        case XMLStreamConstants.NAMESPACE => {
+//          val i = reader.getNamespaceCount - 1
+//          println("getNamespaceCount=" + reader.getNamespaceCount)
+//          println("getNamespacePrefix=" + reader.getNamespacePrefix(i))
+//          println("getNamespaceURI=" + reader.getNamespaceURI(i))
+//          nextEvents()
+//        }
         case XMLStreamConstants.START_DOCUMENT=> {
           val retv = List(StartXmlDocumentEvent(
             reader.getEncoding,
@@ -121,8 +127,13 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
           val locator = getLocatorFromReader
           reader.next()
           val (value, peekQueue) = peekParseElementValue()
+          val metadata = XmlElement.Metadata(
+            orderedAttributes = Some(attributes),
+            orderedPrefixes = Some(prefixes),
+            locator = Some(locator)
+          )
           peekQueue :::
-            AddXmlElementEvent(XmlElement(qName, value, attributes, prefixes), locator) :: Nil
+            StartXmlElementEvent(XmlElement(qName, value, attributes.toMap, prefixes.toMap, Some(metadata)), locator) :: Nil
         }
         case XMLStreamConstants.END_ELEMENT => {
           val retv = List(EndXmlElementEvent(getElementQNameFromReader, getLocatorFromReader))
