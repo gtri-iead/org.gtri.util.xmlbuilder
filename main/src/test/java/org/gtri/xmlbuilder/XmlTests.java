@@ -36,6 +36,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
 import javax.xml.stream.XMLStreamException;
+import org.gtri.util.issue.api.Issue;
 import org.gtri.util.iteratee.api.*;
 import org.gtri.util.iteratee.impl.test.TestPrintConsumer;
 import org.gtri.util.iteratee.IterateeFactory;

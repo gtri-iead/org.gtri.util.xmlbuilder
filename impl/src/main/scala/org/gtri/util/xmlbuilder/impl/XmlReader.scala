@@ -22,76 +22,107 @@
 
 package org.gtri.util.xmlbuilder.impl
 
-
-import javax.xml.stream.{XMLStreamReader, XMLStreamConstants}
+import javax.xml.stream.{XMLStreamConstants, XMLStreamReader}
+import org.gtri.util.scala.exelog.sideeffects._
 import org.gtri.util.xsddatatypes._
+import org.gtri.util.issue.Issues
+import org.gtri.util.issue.api.{ Issue, IssueHandlingStrategy }
+import org.gtri.util.iteratee.api._
+import org.gtri.util.iteratee.impl.iteratees.Chunk
+import org.gtri.util.iteratee.impl.ImmutableBufferConversions._
+import org.gtri.util.iteratee.impl.enumerators._
 import org.gtri.util.xmlbuilder.api.XmlEvent
 import org.gtri.util.xmlbuilder.api.XmlFactory.XMLStreamReaderFactory
-import org.gtri.util.iteratee.api._
-import org.gtri.util.iteratee.impl.Enumerators._
-
-import org.gtri.util.iteratee.impl.ImmutableBufferConversions._
+import org.gtri.util.xmlbuilder.impl.events._
 import annotation.tailrec
-import org.gtri.util.xmlbuilder.impl.XmlElement.Metadata
 
-/**
- * Created with IntelliJ IDEA.
- * User: Lance
- * Date: 11/4/12
- * Time: 6:49 PM
- * To change this template use File | Settings | File Templates.
- */
-class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandlingCode = IssueHandlingCode.NORMAL, val chunkSize : Int = 256) extends Enumerator[XmlEvent] {
+
+object XmlReader {
+  implicit val classlog = ClassLog(classOf[XmlReader])
+}
+class XmlReader(
+  factory : XMLStreamReaderFactory,
+  issueHandlingStrategy : IssueHandlingStrategy,
+  val chunkSize : Int = 256
+) extends Enumerator[XmlEvent] {
+  import XmlReader._
   require(chunkSize > 0)
 
   def initialState() = {
-    val result = factory.create()
-    Cont(result.reader(), new Progress(0,0,result.totalByteSize))
+    implicit val log = enter("initialState")()
+    try {
+      +"Trying to create reader"
+      val result = factory.create()
+      +"Created reader"
+      Cont(result.reader(), new Progress(0,0,result.totalByteSize)) <~: log
+    } catch {
+      case e : Exception =>
+        log.fatal("Failed to create reader",e)
+        val msg : String = e.getMessage
+        val issue : Issue = Issues.INSTANCE.fatalError(msg)
+        Failure[XmlEvent](
+          progress = Progress.empty,
+          issues = Chunk(issue)
+        ) <~: log
+    }
   }
 
   case class Cont(reader : XMLStreamReader, val progress : Progress) extends Enumerator.State[XmlEvent] {
 
-    def statusCode = if(reader.hasNext) StatusCode.CONTINUE else StatusCode.SUCCESS
+    def statusCode = StatusCode.CONTINUE
 
     def step() = {
+      implicit val log = enter("step")()
       // TODO: what happens if reader fails?
-
-      // Note: may exceed buffer size due to peek - this shouldn't matter downstream though
+      +"Filling buffer"
+      ~s"Creating buffer of size=$chunkSize"
       val buffer = new collection.mutable.ArrayBuffer[XmlEvent](chunkSize)
-      // Fill buffer
+      ~s"Filling buffer with nextEvents"
       while(buffer.size < chunkSize && reader.hasNext) {
-        for(event <- nextEvents().reverse) {
-          buffer.append(event)
-        }
+        buffer ++= nextEvents().reverse
       }
-      // Calc next progress if possible
+      ~s"Filled buffer#: $buffer"
+
+      +"Calculating nextProgress"
       val nextProgress = {
         if(progress.totalItemCount > 0) {
           val charOffset = reader.getLocation.getCharacterOffset
-          // -1 is returned after eoi reached
+          ~s"Got charOffset=$charOffset -1 is returned after eoi reached"
           if(charOffset == -1) {
+            ~s"At eoi"
             new Progress(0,progress.totalItemCount,progress.totalItemCount)
           } else {
+            ~s"Some progress"
             new Progress(0,reader.getLocation.getCharacterOffset,progress.totalItemCount)
           }
         } else {
+          ~s"Not possible to calc nextProgress setting to empty"
           Progress.empty
         }
       }
-      // If buffer is empty we are done
+      ~s"nextProgress=$nextProgress"
+
+      +s"If buffer is empty we are done"
       if(buffer.isEmpty) {
+        +s"Buffer is empty - close reader and return Success"
         reader.close()
-        Success(nextProgress)
+
+        Success[XmlEvent](
+          progress = nextProgress,
+          output = Chunk(EndXmlDocumentEvent(getLocatorFromReader))
+        ) <~: log
       } else {
+        +s"Buffer not empty - make immutable copy and return result"
         val immutableCopyOfBuffer : IndexedSeq[XmlEvent] = buffer.toIndexedSeq
-        Result(Cont(reader, nextProgress), immutableCopyOfBuffer)
+        Result(Cont(reader, nextProgress), immutableCopyOfBuffer) <~: log
       }
     }
 
-    // Gets the next event - if next event is an element will peek at next few elements to try to extract value
-    // and will return the events it peeked at inaddition to the AddXmlElementEvent
     private def nextEvents() : List[XmlEvent] = {
-      reader.getEventType() match {
+      implicit val log = enter("nextEvents")()
+      val eventType = reader.getEventType()
+      ~s"MATCH reader.getEventType=$eventType"
+      eventType match {
 //        case XMLStreamConstants.ATTRIBUTE => {
 //          val i = reader.getAttributeCount - 1
 //          println("getAttributeCount=" + reader.getAttributeCount)
@@ -106,7 +137,8 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
 //          println("getNamespaceURI=" + reader.getNamespaceURI(i))
 //          nextEvents()
 //        }
-        case XMLStreamConstants.START_DOCUMENT=> {
+        case XMLStreamConstants.START_DOCUMENT => {
+          ~s"CASE START_DOCUMENT"
           val retv = List(StartXmlDocumentEvent(
             reader.getEncoding,
             reader.getVersion,
@@ -114,44 +146,60 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
             reader.getCharacterEncodingScheme,
             getLocatorFromReader
           ))
+          ~"reader.next()"
           reader.next()
-          retv
+          retv <~: log
         }
         case XMLStreamConstants.END_DOCUMENT => {
+          ~s"CASE END_DOCUMENT"
           val retv = List(EndXmlDocumentEvent(getLocatorFromReader))
-          reader.next()
-          retv
+          retv <~: log
         }
         case XMLStreamConstants.START_ELEMENT => {
+          ~s"CASE START_ELEMENT"
           val (qName, attributes, prefixes) = getElementInfoFromReader()
           val locator = getLocatorFromReader
+          ~s"reader.next()"
           reader.next()
           val (value, peekQueue) = peekParseElementValue()
-          peekQueue :::
+          ~s"Peek parsed value=$value peekQueue=$peekQueue"
+          val retv = peekQueue :::
             StartXmlElementEvent(XmlElement(qName, value, attributes, prefixes, locator), locator) :: Nil
+          retv <~: log
         }
         case XMLStreamConstants.END_ELEMENT => {
+          ~s"CASE END_ELEMENT"
           val retv = List(EndXmlElementEvent(getElementQNameFromReader, getLocatorFromReader))
+          ~s"reader.next()"
           reader.next()
-          retv
+          retv <~: log
         }
         case XMLStreamConstants.CHARACTERS => {
+          ~s"CASE CHARACTERS"
           val retv = List(AddXmlTextEvent(reader.getText(), getLocatorFromReader))
+          ~s"reader.next()"
           reader.next()
-          retv
+          retv <~: log
         }
         case XMLStreamConstants.CDATA => {
+          ~s"CASE CDATA"
           val retv = List(AddXmlTextEvent(reader.getText(), getLocatorFromReader))
+          ~s"reader.next()"
           reader.next()
-          retv
+          retv <~: log
         }
         case XMLStreamConstants.COMMENT => {
+          ~s"CASE COMMENT"
           val retv = List(AddXmlCommentEvent(reader.getText(), getLocatorFromReader))
+          ~s"reader.next()"
           reader.next()
-          retv
+          retv <~: log
         }
         case _ =>
+          log warn s"Unhandled event: $eventType"
+          ~s"reader.next()"
           reader.next()
+          ~s"Recursing nextEvents"
           nextEvents()
       }
     }
@@ -163,8 +211,9 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
       new XsdQName(prefix, uri, localName)
     }
 
-//    private def fetchElementFromReader(peekQueue : collection.mutable.Queue[XmlEvent]) : XmlElement = {
     private def getElementInfoFromReader() : (XsdQName, Seq[(XsdQName, String)], Seq[(XsdNCName, XsdAnyURI)]) = {
+      implicit val log = enter(s"getElementInfoFromReader")()
+
       val qName = getElementQNameFromReader
       val attributes = {
         for(i <- 0 until reader.getAttributeCount())
@@ -186,7 +235,8 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
           prefix -> uri
         }
       }
-      (qName, attributes, prefixes)
+
+      (qName, attributes, prefixes) <~: log
     }
 
     private def newXsdAnyURI(uri: String) = {
@@ -212,12 +262,18 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
     // text events
     @tailrec
     private def peekParseElementValue(peekQueue : List[XmlEvent] = Nil) : (Option[String], List[XmlEvent]) = {
+      implicit val log = enter("peekParseElementValue") { "peekQueue#" -> peekQueue :: Nil }
       val events = nextEvents()
+      ~s"MATCH nextEvents=$events"
       events match {
         case List(e:AddXmlTextEvent) => {
+          ~"CASE List(e:AddXmlTextEvent)"
+          ~s"Got an events list with exactly one AddXmlTextEvent=$e"
           peekParseElementValue(e :: peekQueue)
         }
         case List(e:EndXmlElementEvent) => {
+          ~"CASE List(e:EndXmlElementEvent)"
+          ~s"Got an events list with exactly one EndXmlElementEvent=$e"
           if(peekQueue.nonEmpty) {
             val result = peekQueue.foldLeft(new StringBuilder) {
               (s,event) =>
@@ -225,13 +281,14 @@ class XmlReader(factory : XMLStreamReaderFactory, issueHandlingCode : IssueHandl
                   case AddXmlTextEvent(text,_) => s.append(text)
                 }
             }
-            (Some(result.toString), events)
+            (Some(result.toString), events) <~: log
           } else {
-            (None, events)
+            (None, events) <~: log
           }
         }
         case _ => {
-          (None, events ::: peekQueue)
+          ~"CASE _"
+          (None, events ::: peekQueue) <~: log
         }
       }
     }

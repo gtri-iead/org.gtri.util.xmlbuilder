@@ -22,131 +22,182 @@
 
 package org.gtri.util.xmlbuilder.impl
 
-import org.gtri.util.iteratee.api._
-import org.gtri.util.iteratee.impl.Iteratees._
-import org.gtri.util.xsddatatypes.XsdQName.NamespaceURIToPrefixResolver
-import org.gtri.util.xsddatatypes.{XsdNCName, XsdAnyURI}
 import annotation.tailrec
-import org.gtri.util.xmlbuilder.api.XmlEvent
-import org.gtri.util.xmlbuilder.api.XmlFactory.XMLStreamWriterFactory
 import javax.xml.stream.XMLStreamWriter
 import javax.xml.XMLConstants
+import org.gtri.util.scala.exelog._
+import org.gtri.util.issue.api.{Issue, IssueHandlingStrategy}
+import org.gtri.util.issue.Issues
 import org.gtri.util.iteratee.impl.ImmutableBufferConversions._
-import org.gtri.util.iteratee.impl.Iteratees.Result
+import org.gtri.util.iteratee.api._
+import org.gtri.util.iteratee.impl.iteratees._
+import org.gtri.util.xsddatatypes.XsdQName.NamespaceURIToPrefixResolver
+import org.gtri.util.xsddatatypes.{XsdNCName, XsdAnyURI}
+import org.gtri.util.xmlbuilder.api.XmlEvent
+import org.gtri.util.xmlbuilder.api.XmlFactory.XMLStreamWriterFactory
+import org.gtri.util.xmlbuilder.impl.events._
+import sideeffects._
 
-/**
- * Created with IntelliJ IDEA.
- * User: Lance
- * Date: 11/12/12
- * Time: 9:05 PM
- * To change this template use File | Settings | File Templates.
- */
-class XmlWriter(factory : XMLStreamWriterFactory, issueHandlingCode : IssueHandlingCode = IssueHandlingCode.NORMAL) extends Iteratee[XmlEvent, Unit] {
-  def initialState =  Cont(factory.create(), Nil)
+object XmlWriter {
+  implicit val classlog = ClassLog(classOf[XmlWriter])
+}
+class XmlWriter(factory : XMLStreamWriterFactory, issueHandlingStrategy : IssueHandlingStrategy) extends Iteratee[XmlEvent, Unit] {
+  import XmlWriter._
 
+  def initialState =  {
+    implicit val log = enter("initialState")()
+    val retv : Iteratee.State[XmlEvent, Unit] =
+      try {
+        +"Trying to create writer"
+        val result = factory.create()
+        +"Created writer"
+        Cont(factory.create(), Nil)
+      } catch {
+        case e : Exception =>
+          log.fatal("Failed to create writer",e)
+          val msg : String = e.getMessage
+          val issue : Issue = Issues.INSTANCE.fatalError(msg)
+          Failure(issues = Chunk(issue))
+      }
+    retv <~: log
+  }
+
+  object Cont {
+    implicit val classlog = ClassLog(classOf[Cont])
+  }
   case class Cont(writer : XMLStreamWriter, stack : List[XmlElement]) extends SingleItemCont[XmlEvent, Unit] {
+    import Cont._
 
     def apply(xmlEvent: XmlEvent) = {
+      implicit val log = enter("apply") { "xmlEvent" -> xmlEvent :: Nil }
+      +"Writing XmlEvent & appending to active element stack"
       val (newStack, issues) = writeXmlEvent(xmlEvent, stack)
-      Result(next = Cont(writer, newStack), issues = issues)
+      Result(next = Cont(writer, newStack), issues = issues) <~: log
     }
 
     def endOfInput() = {
+      implicit val log = enter("endOfInput")()
+      +"Flush and close writer, return success"
       writer.flush()
       writer.close()
-      Success()
+      val retv : Iteratee.State.Result[XmlEvent,Unit] = Success()
+      retv <~: log
     }
 
     private def writeXmlEvent(xmlEvent : XmlEvent, stack : List[XmlElement]) : (List[XmlElement], List[Issue]) = {
-      xmlEvent match {
-        case e:StartXmlDocumentEvent => {
-          writer.writeStartDocument()
-          (stack, Nil)
-        }
-        case e:EndXmlDocumentEvent => {
-          writer.writeEndDocument()
-          (stack, Nil)
-        }
-        case e:AddXmlCommentEvent => {
-          writer.writeComment(e.comment)
-          (stack, Nil)
-        }
-        case e:StartXmlElementEvent => {
-          val newStack = e.element :: stack
-          // Start element
-          val qName = e.element.qName
-          val localName = qName.getLocalName.toString
-          val nsURI = qName.getNamespaceURI.toString
-          val optionPrefix = Option(qName.resolvePrefix(getNamespaceURIToPrefixResolver(newStack))).map { _.toString }
-          val prefix = optionPrefix.getOrElse { XMLConstants.DEFAULT_NS_PREFIX }
-          writer.writeStartElement(prefix, localName, nsURI)
-
-          // Write namespace prefixes
-          for((namespacePrefix, namespaceURI) <- e.element.orderedPrefixes) {
-            // Skip the prefix for the element
-            if(prefix != namespacePrefix.toString) {
-              writer.writeNamespace(namespacePrefix.toString, namespaceURI.toString)
-            }
+      implicit val log = enter("writeXmlEvent") { "xmlEvent" -> xmlEvent :: "stack" -> stack :: Nil}
+      ~"Match event"
+      val retv =
+        xmlEvent match {
+          case e:StartXmlDocumentEvent => {
+            ~"Write start document, no change to stack"
+            writer.writeStartDocument()
+            (stack, Nil)
           }
+          case e:EndXmlDocumentEvent => {
+            ~"Write end document, no change to stack"
+            writer.writeEndDocument()
+            (stack, Nil)
+          }
+          case e:AddXmlCommentEvent => {
+            ~"Write comment, no change to stack"
+            writer.writeComment(e.comment)
+            (stack, Nil)
+          }
+          case e:StartXmlElementEvent => {
+            ~"Write start element, append element to stack"
+            val newStack = e.element :: stack
+            // Start element
+            val qName = e.element.qName
+            val localName = qName.getLocalName.toString
+            val nsURI = qName.getNamespaceURI.toString
+            val optionPrefix = Option(qName.resolvePrefix(getNamespaceURIToPrefixResolver(newStack))).map { _.toString }
+            val prefix = optionPrefix.getOrElse { XMLConstants.DEFAULT_NS_PREFIX }
+            ~s"writer.writeStartElement($prefix, $localName, $nsURI)"
+            writer.writeStartElement(prefix, localName, nsURI)
 
-          // Write attributes
-          {
-            // Note: order of attributes is meaningless however, to achieve a stable output, attributes are sorted
-//            val sortedAttributes = e.element.attributesMap.keySet.toList.sortWith( _.getLocalName.toString < _.getLocalName.toString)
+            ~"Write namespace prefixes"
+            for((namespacePrefix, namespaceURI) <- e.element.orderedPrefixes) {
+              // Skip the prefix for the element
+              if(prefix != namespacePrefix.toString) {
+                val namespacePrefixString = namespacePrefix.toString
+                val namespaceURIString = namespaceURI.toString
+                ~s"writer.writeNamespace(namespacePrefix=$namespacePrefixString, namespaceURI=$namespaceURIString)"
+                writer.writeNamespace(namespacePrefixString, namespaceURIString)
+              }
+            }
+
+            ~"Write attributes"
             for((qName,value) <- e.element.orderedAttributes) {
               val localName = qName.getLocalName.toString
               val nsURI = qName.getNamespaceURI.toString
               val optionPrefix = Option(qName.resolvePrefix(getNamespaceURIToPrefixResolver(newStack))).map { _.toString }
               val prefix = optionPrefix.getOrElse { XMLConstants.DEFAULT_NS_PREFIX }
-//              val value = e.element.attributes(qName)
+              ~s"writer.writeAttribute(prefix=$prefix, nsURI=$nsURI, localName=$localName, value=$value)"
               writer.writeAttribute(prefix, nsURI, localName, value)
             }
-          }
 
-          // Write value (if any)
-          val value = e.element.value
-          if(value.isDefined) {
-            writer.writeCharacters(value.get)
+            ~"Write value (if any)"
+            val value = e.element.value
+            if(value.isDefined) {
+              val v = value.get
+              ~s"writer.writeCharacters($v)"
+              writer.writeCharacters(v)
+            }
+            (newStack, Nil)
           }
-          (newStack, Nil)
+          case e:EndXmlElementEvent => {
+            ~"Write end element, no change to stack"
+            writer.writeEndElement()
+            (stack, Nil)
+          }
+          case e:AddXmlTextEvent => {
+            ~"Write characters, no change to stack"
+            val text = e.text
+            ~s"writer.writeCharacters($text)"
+            writer.writeCharacters(e.text)
+            (stack, Nil)
+          }
+          case e:XmlEvent => {
+            val error = Issues.INSTANCE.recoverableError(s"Invalid XmlEvent: $e")
+            if(issueHandlingStrategy.canContinue(error)) {
+              val warn = Issues.INSTANCE.warning(s"Ignoring invalid XmlEvent: $e")
+              (stack, error :: warn :: Nil)
+            }
+            (stack, error :: Nil)
+          }
         }
-        case e:EndXmlElementEvent => {
-          writer.writeEndElement()
-          (stack, Nil)
-        }
-        case e:AddXmlTextEvent => {
-          writer.writeCharacters(e.text)
-          (stack, Nil)
-        }
-        case e:XmlEvent => {
-          val issues =
-            Issues.reportInputLocation(e.locator()) ::
-            Issues.inputWarning("Ignoring invalid XmlEvent '" + e.toString + "'") ::
-            Nil
-          (stack, issues)
-        }
-      }
+      retv <~: log
     }
 
     private def getNamespaceURIToPrefixResolver(stack : List[XmlElement]) = new NamespaceURIToPrefixResolver {
       def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) = {
-        doIsValidPrefixForNamespaceURI(stack, prefix, namespaceURI)
+        implicit val log = enter("isValidPrefixForNamespaceURIToPrefixResolver") { "stack" -> stack :: "prefix" -> prefix :: "namespaceURI" -> namespaceURI :: Nil }
+        doIsValidPrefixForNamespaceURI(stack, prefix, namespaceURI) <~: log
       }
 
       def getPrefixForNamespaceURI(namespaceURI: XsdAnyURI) : XsdNCName = {
-        doGetPrefixForNamespaceURI(stack, namespaceURI)
+        implicit val log = enter("getPrefixForNamespaceURI") { "stack" -> stack :: "namespaceURI" -> namespaceURI :: Nil }
+        doGetPrefixForNamespaceURI(stack, namespaceURI) <~: log
       }
     }
 
     @tailrec
     private def doIsValidPrefixForNamespaceURI(stack : List[XmlElement], prefix: XsdNCName, namespaceURI: XsdAnyURI) : Boolean = {
+      implicit val log = enter("doIsValidPrefixForNamespaceURI") { "prefix" -> prefix :: "namespaceURI" -> namespaceURI :: Nil }
+      ~"Stack empty?"
       if(stack.isEmpty) {
-        false
+        ~"Yes"
+        false <~: log
       } else {
+        ~"No, extract head/tail from stack"
         val head :: tail = stack
+        ~"Does head contain prefix=namespaceURI?"
         if(head.isValidPrefixForNamespaceURI(prefix, namespaceURI)) {
-          true
+          ~"Yes"
+          true <~: log
         } else {
+          ~"No, recurse on tail"
           doIsValidPrefixForNamespaceURI(tail, prefix, namespaceURI)
         }
       }
@@ -154,14 +205,21 @@ class XmlWriter(factory : XMLStreamWriterFactory, issueHandlingCode : IssueHandl
 
     @tailrec
     private def doGetPrefixForNamespaceURI(stack : List[XmlElement], namespaceURI: XsdAnyURI) : XsdNCName = {
+      implicit val log = enter("doGetPrefixForNamespaceURI") { "stack" -> stack :: "namespaceURI" -> namespaceURI :: Nil }
+      ~"Stack empty?"
       if(stack.isEmpty) {
-        null
+        ~"Yes"
+        null <~: log
       } else {
+        ~"No, extract head/tail from stack"
         val head :: tail = stack
+        ~"Does head have prefix for namespaceURI?"
         val result = head.getPrefixForNamespaceURI(namespaceURI)
         if(result != null) {
-          result
+          ~"Yes"
+          result <~: log
         } else {
+          ~"No, recurse on tail"
           doGetPrefixForNamespaceURI(tail, namespaceURI)
         }
       }

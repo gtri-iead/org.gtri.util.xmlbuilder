@@ -26,7 +26,7 @@
  */
 package org.gtri.util.xmlbuilder.api;
 
-import org.gtri.util.iteratee.api.ImmutableDiagnosticLocator;
+import org.gtri.util.issue.api.DiagnosticLocator;
 
 /**
  * An interface for an XML event.
@@ -38,7 +38,7 @@ public interface XmlEvent {
    * Get the diagnostic locator for the event
    * @return the diagnostic locator for the event
    */
-  ImmutableDiagnosticLocator locator();
+  DiagnosticLocator locator();
   /**
    * Push the event to the contract
    * @param contract 

@@ -19,28 +19,20 @@
     along with org.gtri.util.xmlbuilder library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-package org.gtri.util.xmlbuilder.impl
+package org.gtri.util.xmlbuilder.impl.events
 
-import org.gtri.util.xmlbuilder.api
+import org.gtri.util.scala.exelog.sideeffects._
+import org.gtri.util.issue.api.DiagnosticLocator
+import org.gtri.util.xmlbuilder.api.{XmlContract, XmlEvent}
 
-case class XmlFileLocator(charOffset : Int, columnNumber : Int, lineNumber : Int, publicId : String, systemId : String) extends api.XmlFileLocator {
 
-  override def toString = {
-    val s = new StringBuilder
-    s.append('[')
-    if (publicId != null) {
-      s.append(publicId)
-      s.append(' ')
-    }
-    if (systemId != null) {
-      s.append(systemId)
-      s.append(' ')
-    }
-    s.append(lineNumber)
-    s.append(':')
-    s.append(columnNumber)
-    s.append(']')
-    s.toString
+object EndXmlDocumentEvent {
+  implicit val classlog = ClassLog(classOf[EndXmlDocumentEvent])
+}
+case class EndXmlDocumentEvent(locator : DiagnosticLocator) extends XmlEvent {
+  import EndXmlDocumentEvent._
+  def pushTo(contract: XmlContract) {
+    implicit val log = enter("pushTo") { "contract" -> contract :: Nil }
+    +"noop"
   }
 }
-

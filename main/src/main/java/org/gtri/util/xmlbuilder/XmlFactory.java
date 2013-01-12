@@ -36,7 +36,8 @@ import net.sf.saxon.s9api.Processor;
 import net.sf.saxon.s9api.SaxonApiException;
 import net.sf.saxon.s9api.Serializer;
 import org.gtri.util.iteratee.api.Enumerator;
-import org.gtri.util.iteratee.api.IssueHandlingCode;
+import org.gtri.util.issue.api.IssueHandlingStrategy;
+import org.gtri.util.issue.IssueHandling;
 import org.gtri.util.iteratee.api.Iteratee;
 import org.gtri.util.xmlbuilder.api.XmlEvent;
 import org.gtri.util.xmlbuilder.impl.XmlReader;
@@ -47,20 +48,20 @@ import org.gtri.util.xmlbuilder.impl.XmlWriter;
  * @author lance.gatlin@gmail.com
  */
 public final class XmlFactory implements org.gtri.util.xmlbuilder.api.XmlFactory {
-  private final IssueHandlingCode issueHandlingCode;
+  private final IssueHandlingStrategy issueHandlingStrategy;
   
-  public XmlFactory(IssueHandlingCode _issueHandlingCode) { 
-    issueHandlingCode = _issueHandlingCode;
+  public XmlFactory(IssueHandlingStrategy _issueHandlingCode) { 
+    issueHandlingStrategy = _issueHandlingCode;
   }
   public XmlFactory() {
-    issueHandlingCode = IssueHandlingCode.NORMAL;
+    issueHandlingStrategy = IssueHandling.INSTANCE.createNormalStrategy();
   }
   
   public static final int STD_CHUNK_SIZE = 256;
 
   @Override
   public Enumerator<XmlEvent> createXmlReader(final XMLStreamReaderFactory factory, int chunkSize) {
-    return new XmlReader(factory, issueHandlingCode, chunkSize);
+    return new XmlReader(factory, issueHandlingStrategy, chunkSize);
   }
   
   public Enumerator<XmlEvent> createXmlReader(final XMLStreamReaderFactory factory) {
@@ -141,7 +142,7 @@ public final class XmlFactory implements org.gtri.util.xmlbuilder.api.XmlFactory
   
   @Override
   public Iteratee<XmlEvent,?> createXmlWriter(final XMLStreamWriterFactory factory) {
-    return new XmlWriter(factory, issueHandlingCode);
+    return new XmlWriter(factory, issueHandlingStrategy);
   }
   
   public Iteratee<XmlEvent,?> createXmlWriter(final OutputStream out) {

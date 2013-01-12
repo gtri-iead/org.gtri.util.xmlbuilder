@@ -21,14 +21,14 @@
 */
 package org.gtri.util.xmlbuilder.api;
 
-import org.gtri.util.iteratee.api.ImmutableDiagnosticLocator;
+import org.gtri.util.issue.api.DiagnosticLocator;
 
 /**
  * An interface for the location of an event within an XML file.
  * 
  * @author lance.gatlin@gmail.com
  */
-public interface XmlFileLocator extends ImmutableDiagnosticLocator {
+public interface XmlFileLocator extends DiagnosticLocator {
   /**
    * Get the character offset
    * @return the character offset
