@@ -21,7 +21,7 @@
 */
 package org.gtri.util.xmlbuilder.impl
 
-import org.gtri.util.scala.exelog.sideeffects._
+import org.gtri.util.scala.exelog.noop._
 import org.gtri.util.xsddatatypes.{XsdAnyURI, XsdNCName, XsdQName}
 import org.gtri.util.xsddatatypes.XsdQName.NamespaceURIToPrefixResolver
 import org.gtri.util.xmlbuilder.impl.XmlElement.Metadata
@@ -29,20 +29,22 @@ import org.gtri.util.issue.api.DiagnosticLocator
 
 
 object XmlElement {
-  implicit val classlog = ClassLog(classOf[XmlElement])
+  implicit val thisclass = classOf[XmlElement]
+  implicit val log : Log = Logger.getLog(thisclass)
+
   case class Metadata(
-                       rawAttributesOrder: Option[Seq[String]] = None,
-                       attributesOrder: Option[Seq[XsdQName]] = None,
-                       prefixesOrder: Option[Seq[XsdNCName]] = None,
-                       locator : Option[DiagnosticLocator] = None
-                       )
+    rawAttributesOrder: Option[Seq[String]] = None,
+    attributesOrder: Option[Seq[XsdQName]] = None,
+    prefixesOrder: Option[Seq[XsdNCName]] = None,
+    locator : Option[DiagnosticLocator] = None
+  )
 
   def apply(
-             qName : XsdQName,
-             value : Option[String],
-             attributes : Seq[(XsdQName, String)],
-             prefixes : Seq[(XsdNCName, XsdAnyURI)]
-             ) = new XmlElement(
+    qName : XsdQName,
+    value : Option[String],
+    attributes : Seq[(XsdQName, String)],
+    prefixes : Seq[(XsdNCName, XsdAnyURI)]
+  ) = new XmlElement(
     qName,
     value,
     attributes.toMap,
@@ -51,12 +53,12 @@ object XmlElement {
   )
 
   def apply(
-             qName : XsdQName,
-             value : Option[String],
-             attributes : Seq[(XsdQName, String)],
-             prefixes : Seq[(XsdNCName, XsdAnyURI)],
-             locator : DiagnosticLocator
-             ) = new XmlElement(
+    qName : XsdQName,
+    value : Option[String],
+    attributes : Seq[(XsdQName, String)],
+    prefixes : Seq[(XsdNCName, XsdAnyURI)],
+    locator : DiagnosticLocator
+  ) = new XmlElement(
     qName,
     value,
     attributes.toMap,
@@ -70,52 +72,56 @@ case class XmlElement(
   attributesMap : Map[XsdQName, String],
   prefixToNamespaceURIMap : Map[XsdNCName, XsdAnyURI],
   metadata : Option[Metadata] = None
-) extends NamespaceURIToPrefixResolver {
+)extends NamespaceURIToPrefixResolver {
   import XmlElement._
 
   lazy val orderedAttributes : Seq[(XsdQName, String)] = {
-    implicit val log = enter("orderAttributes")()
-    +"Order attributes by attributesOrder metadata (if defined) or sort lexographically by name"
-    if(metadata.isDefined && metadata.get.attributesOrder.isDefined) {
-      ~"Sort by metadata attributesOrder"
-      metadata.get.attributesOrder.get.map({ 
-        qName => attributesMap.get(qName).map { value => (qName,value) }
-      }).flatten
-    } else {
-      ~"Sort by name lexographically"
-      attributesMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
-    }<~: log
+    log.block("orderAttributes") {
+      +"Order attributes by attributesOrder metadata (if defined) or sort lexographically by name"
+      if(metadata.isDefined && metadata.get.attributesOrder.isDefined) {
+        ~"Sort by metadata attributesOrder"
+        metadata.get.attributesOrder.get.map({
+          qName => attributesMap.get(qName).map { value => (qName,value) }
+        }).flatten
+      } else {
+        ~"Sort by name lexographically"
+        attributesMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
+      }
+    }
   }
 
   lazy val orderedPrefixes : Seq[(XsdNCName, XsdAnyURI)] = {
-    implicit val log = enter("orderedPrefixes")()
-    +"Order prefixes by prefixOrder metadata (if defined) or sort lexographically name"
-    if(metadata.isDefined && metadata.get.prefixesOrder.isDefined) {
-      ~"Sort by metadata prefixOrder"
-      metadata.get.prefixesOrder.get.map({
-        prefix => prefixToNamespaceURIMap.get(prefix).map { uri => (prefix,uri) }
-      }).flatten
-    } else {
-      ~"Sort by name lexographically"
-      prefixToNamespaceURIMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
-    } <~: log
+    log.block("orderedPrefixes") {
+      +"Order prefixes by prefixOrder metadata (if defined) or sort lexographically name"
+      if(metadata.isDefined && metadata.get.prefixesOrder.isDefined) {
+        ~"Sort by metadata prefixOrder"
+        metadata.get.prefixesOrder.get.map({
+          prefix => prefixToNamespaceURIMap.get(prefix).map { uri => (prefix,uri) }
+        }).flatten
+      } else {
+        ~"Sort by name lexographically"
+        prefixToNamespaceURIMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
+      }
+    }
   }
 
   lazy val namespaceURIToPrefixMap = prefixToNamespaceURIMap.map(_.swap)
 
   def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) = {
-    implicit val log = enter("isValidPrefixForNamespaceURI") { "prefix" -> prefix :: "namespaceURI" -> namespaceURI :: Nil }
-    +"TRUE if prefix is defined with the given namespaceURI otherwise FALSE"
-    val optionNsURI = prefixToNamespaceURIMap.get(prefix)
-    if(optionNsURI.isDefined) {
-      optionNsURI.get == namespaceURI
-    } else {
-      false
-    } <~: log
+    log.block("isValidPrefixForNamespaceURI", Seq("prefix" -> prefix, "namespaceURI" -> namespaceURI)) {
+      +"TRUE if prefix is defined with the given namespaceURI otherwise FALSE"
+      val optionNsURI = prefixToNamespaceURIMap.get(prefix)
+      if(optionNsURI.isDefined) {
+        optionNsURI.get == namespaceURI
+      } else {
+        false
+      }
+    }
   }
 
   def getPrefixForNamespaceURI(namespaceURI: XsdAnyURI) = {
-    implicit val log = enter("getPrefixForNamespaceURI"){ "namespaceURI" -> namespaceURI :: Nil }
-    namespaceURIToPrefixMap.get(namespaceURI).orNull <~: log
+    log.block("getPrefixForNamespaceURI", Seq("namespaceURI" -> namespaceURI)) {
+      namespaceURIToPrefixMap.get(namespaceURI).orNull
+    }
   }
 }

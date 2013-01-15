@@ -25,7 +25,7 @@ package org.gtri.util.xmlbuilder.impl
 import annotation.tailrec
 import javax.xml.stream.XMLStreamWriter
 import javax.xml.XMLConstants
-import org.gtri.util.scala.exelog._
+import org.gtri.util.scala.exelog.noop._
 import org.gtri.util.issue.api.{Issue, IssueHandlingStrategy}
 import org.gtri.util.issue.Issues
 import org.gtri.util.iteratee.impl.ImmutableBufferConversions._
@@ -36,17 +36,19 @@ import org.gtri.util.xsddatatypes.{XsdNCName, XsdAnyURI}
 import org.gtri.util.xmlbuilder.api.XmlEvent
 import org.gtri.util.xmlbuilder.api.XmlFactory.XMLStreamWriterFactory
 import org.gtri.util.xmlbuilder.impl.events._
-import sideeffects._
 
 object XmlWriter {
-  implicit val classlog = ClassLog(classOf[XmlWriter])
+  implicit val thisclass = classOf[XmlWriter]
+  implicit val log = Logger.getLog(thisclass)
 }
-class XmlWriter(factory : XMLStreamWriterFactory, issueHandlingStrategy : IssueHandlingStrategy) extends Iteratee[XmlEvent, Unit] {
-  import XmlWriter._
 
+class XmlWriter(
+  factory : XMLStreamWriterFactory,
+  issueHandlingStrategy : IssueHandlingStrategy
+) extends Iteratee[XmlEvent, Unit] {
+  import XmlWriter._
   def initialState =  {
-    implicit val log = enter("initialState")()
-    val retv : Iteratee.State[XmlEvent, Unit] =
+    log.block("initialState"){
       try {
         +"Trying to create writer"
         val result = factory.create()
@@ -59,35 +61,31 @@ class XmlWriter(factory : XMLStreamWriterFactory, issueHandlingStrategy : IssueH
           val issue : Issue = Issues.INSTANCE.fatalError(msg)
           Failure(issues = Chunk(issue))
       }
-    retv <~: log
+    }
   }
 
-  object Cont {
-    implicit val classlog = ClassLog(classOf[Cont])
-  }
   case class Cont(writer : XMLStreamWriter, stack : List[XmlElement]) extends SingleItemCont[XmlEvent, Unit] {
-    import Cont._
 
     def apply(xmlEvent: XmlEvent) = {
-      implicit val log = enter("apply") { "xmlEvent" -> xmlEvent :: Nil }
-      +"Writing XmlEvent & appending to active element stack"
-      val (newStack, issues) = writeXmlEvent(xmlEvent, stack)
-      Result(next = Cont(writer, newStack), issues = issues) <~: log
+      log.block("apply", Seq("xmlEvent" -> xmlEvent)){
+        +"Writing XmlEvent & appending to active element stack"
+        val (newStack, issues) = writeXmlEvent(xmlEvent, stack)
+        Result(next = Cont(writer, newStack), issues = issues)
+      }
     }
 
     def endOfInput() = {
-      implicit val log = enter("endOfInput")()
-      +"Flush and close writer, return success"
-      writer.flush()
-      writer.close()
-      val retv : Iteratee.State.Result[XmlEvent,Unit] = Success()
-      retv <~: log
+      log.block("endOfInput") {
+        +"Flush and close writer, return success"
+        writer.flush()
+        writer.close()
+        Success()
+      }
     }
 
     private def writeXmlEvent(xmlEvent : XmlEvent, stack : List[XmlElement]) : (List[XmlElement], List[Issue]) = {
-      implicit val log = enter("writeXmlEvent") { "xmlEvent" -> xmlEvent :: "stack" -> stack :: Nil}
-      ~"Match event"
-      val retv =
+      log.block("writeXmlEvent", Seq("xmlEvent" -> xmlEvent, "stack" -> stack)) {
+        ~"Match event"
         xmlEvent match {
           case e:StartXmlDocumentEvent => {
             ~"Write start document, no change to stack"
@@ -167,35 +165,41 @@ class XmlWriter(factory : XMLStreamWriterFactory, issueHandlingStrategy : IssueH
             (stack, error :: Nil)
           }
         }
-      retv <~: log
+      }
     }
 
     private def getNamespaceURIToPrefixResolver(stack : List[XmlElement]) = new NamespaceURIToPrefixResolver {
       def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) = {
-        implicit val log = enter("isValidPrefixForNamespaceURIToPrefixResolver") { "stack" -> stack :: "prefix" -> prefix :: "namespaceURI" -> namespaceURI :: Nil }
-        doIsValidPrefixForNamespaceURI(stack, prefix, namespaceURI) <~: log
+        log.block("isValidPrefixForNamespaceURIToPrefixResolver", Seq("stack" -> stack, "prefix" -> prefix, "namespaceURI" -> namespaceURI)) {
+          doIsValidPrefixForNamespaceURI(stack, prefix, namespaceURI)
+        }
       }
 
       def getPrefixForNamespaceURI(namespaceURI: XsdAnyURI) : XsdNCName = {
-        implicit val log = enter("getPrefixForNamespaceURI") { "stack" -> stack :: "namespaceURI" -> namespaceURI :: Nil }
-        doGetPrefixForNamespaceURI(stack, namespaceURI) <~: log
+        log.block("getPrefixForNamespaceURI",Seq("stack" -> stack,"namespaceURI" -> namespaceURI)) {
+          doGetPrefixForNamespaceURI(stack, namespaceURI)
+        }
       }
     }
 
     @tailrec
     private def doIsValidPrefixForNamespaceURI(stack : List[XmlElement], prefix: XsdNCName, namespaceURI: XsdAnyURI) : Boolean = {
-      implicit val log = enter("doIsValidPrefixForNamespaceURI") { "prefix" -> prefix :: "namespaceURI" -> namespaceURI :: Nil }
+      log.begin("doIsValidPrefixForNamespaceURI", Seq("prefix" -> prefix, "namespaceURI" -> namespaceURI))
       ~"Stack empty?"
       if(stack.isEmpty) {
         ~"Yes"
-        false <~: log
+        val retv = false
+        log.end("doIsValidPrefixForNamespaceURI", retv)
+        retv
       } else {
         ~"No, extract head/tail from stack"
         val head :: tail = stack
         ~"Does head contain prefix=namespaceURI?"
         if(head.isValidPrefixForNamespaceURI(prefix, namespaceURI)) {
           ~"Yes"
-          true <~: log
+          val retv = true
+          log.end("doIsValidPrefixForNamespaceURI", retv)
+          retv
         } else {
           ~"No, recurse on tail"
           doIsValidPrefixForNamespaceURI(tail, prefix, namespaceURI)
@@ -205,24 +209,28 @@ class XmlWriter(factory : XMLStreamWriterFactory, issueHandlingStrategy : IssueH
 
     @tailrec
     private def doGetPrefixForNamespaceURI(stack : List[XmlElement], namespaceURI: XsdAnyURI) : XsdNCName = {
-      implicit val log = enter("doGetPrefixForNamespaceURI") { "stack" -> stack :: "namespaceURI" -> namespaceURI :: Nil }
-      ~"Stack empty?"
-      if(stack.isEmpty) {
-        ~"Yes"
-        null <~: log
-      } else {
-        ~"No, extract head/tail from stack"
-        val head :: tail = stack
-        ~"Does head have prefix for namespaceURI?"
-        val result = head.getPrefixForNamespaceURI(namespaceURI)
-        if(result != null) {
+      log.begin("doGetPrefixForNamespaceURI", Seq("stack" -> stack, "namespaceURI" -> namespaceURI))
+        ~"Stack empty?"
+        if(stack.isEmpty) {
           ~"Yes"
-          result <~: log
+          val retv = null
+          log.end("doGetPrefixForNamespaceURI", retv)
+          retv
         } else {
-          ~"No, recurse on tail"
-          doGetPrefixForNamespaceURI(tail, namespaceURI)
+          ~"No, extract head/tail from stack"
+          val head :: tail = stack
+          ~"Does head have prefix for namespaceURI?"
+          val result = head.getPrefixForNamespaceURI(namespaceURI)
+          if(result != null) {
+            ~"Yes"
+            val retv = result
+            log.end("doGetPrefixForNamespaceURI", retv)
+            retv
+          } else {
+            ~"No, recurse on tail"
+            doGetPrefixForNamespaceURI(tail, namespaceURI)
+          }
         }
-      }
     }
   }
 }

@@ -4,7 +4,7 @@
     <facet type="scala" name="Scala">
       <configuration>
         <option name="compilerLibraryLevel" value="Project" />
-        <option name="compilerLibraryName" value="scala-2.9.2" />
+        <option name="compilerLibraryName" value="scala-2.10.0-RC5" />
         <option name="deprecationWarnings" value="true" />
         <option name="fsc" value="true" />
         <option name="uncheckedWarnings" value="true" />
@@ -12,8 +12,8 @@
     </facet>
   </component>
   <component name="NewModuleRootManager" inherit-compiler-output="false">
-    <output url="file://$MODULE_DIR$/../target/scala-2.9.2/classes" />
-    <output-test url="file://$MODULE_DIR$/../target/scala-2.9.2/test-classes" />
+    <output url="file://$MODULE_DIR$/../target/scala-2.10/classes" />
+    <output-test url="file://$MODULE_DIR$/../target/scala-2.10/test-classes" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/..">
       <sourceFolder url="file://$MODULE_DIR$/../src/main/scala" isTestSource="false" />
@@ -26,16 +26,22 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="org.scala-lang_scala-library_2.9.2" level="project" />
-    <orderEntry type="library" name="org.scalatest_scalatest_2.9.2_1.6.1" level="project" />
+    <orderEntry type="library" name="org.scala-lang_scala-library_2.10.0-RC5" level="project" />
+    <orderEntry type="library" name="xerces_xercesImpl_2.4.0" level="project" />
     <orderEntry type="library" name="com.google.guava_guava_11.0.2" level="project" />
     <orderEntry type="library" name="com.google.code.findbugs_jsr305_1.3.9" level="project" />
-    <orderEntry type="library" name="xerces_xercesImpl_2.4.0" level="project" />
-    <orderEntry type="library" name="iteratee.api-1.0-SNAPSHOT.jar" level="project" />
-    <orderEntry type="library" name="iteratee.impl_2.9.2-1.0-SNAPSHOT.jar" level="project" />
-    <orderEntry type="library" name="iteratee.main_2.9.2-1.0-SNAPSHOT.jar" level="project" />
-    <orderEntry type="library" name="xmlbuilder.api-1.0-SNAPSHOT.jar" level="project" />
-    <orderEntry type="library" name="xsddatatypes-1.0-SNAPSHOT.jar" level="project" />
+    <orderEntry type="library" name="org.gtri.util_scala.exelog_2.10_1.0-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="org.scalatest_scalatest_2.10.0-RC5_2.0.M5-B1" level="project" />
+    <orderEntry type="library" name="log4j_log4j_1.2.17" level="project" />
+    <orderEntry type="library" name="org.gtri.util_issue.main_2.10_1.0-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="org.gtri.util_issue.impl_2.10_1.0-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="org.gtri.util_issue.api_1.0-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="org.gtri.util_xsddatatypes_1.0-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="org.gtri.util_iteratee.api_1.0-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="org.gtri.util_iteratee.impl_2.10_1.0-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="org.gtri.util_scala.optrecover_2.10_1.0-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="org.scalaz_scalaz-core_2.10.0-RC5_7.0.0-M6" level="project" />
+    <orderEntry type="library" name="org.gtri.util_xmlbuilder.api_1.0-SNAPSHOT" level="project" />
   </component>
 </module>
 

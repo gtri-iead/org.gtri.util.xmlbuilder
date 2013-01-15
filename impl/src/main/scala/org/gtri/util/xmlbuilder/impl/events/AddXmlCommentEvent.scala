@@ -21,20 +21,22 @@
 */
 package org.gtri.util.xmlbuilder.impl.events
 
-import org.gtri.util.scala.exelog.sideeffects._
+import org.gtri.util.scala.exelog.noop._
 import org.gtri.util.issue.api.DiagnosticLocator
 import org.gtri.util.xmlbuilder.api.{XmlContract, XmlEvent}
 
 object AddXmlCommentEvent {
-  implicit val classlog = ClassLog(classOf[AddXmlCommentEvent])
+  implicit val thisclass = classOf[AddXmlCommentEvent]
+  implicit val log = Logger.getLog(thisclass)
 }
 case class AddXmlCommentEvent(comment : String, locator : DiagnosticLocator) extends XmlEvent {
   import AddXmlCommentEvent._
   def pushTo(contract: XmlContract) {
-    implicit val log = enter("pushTo") { "contract" -> contract :: Nil }
-    +"Pushing AddXmlCommentEvent to XmlContract"
-    ~s"contract.addXmlComment($comment)"
-    contract.addXmlComment(comment)
+    log.block("pushTo", Seq("contract" -> contract)) {
+      +"Pushing AddXmlCommentEvent to XmlContract"
+      ~s"contract.addXmlComment($comment)"
+      contract.addXmlComment(comment)
+    }
   }
 }
 

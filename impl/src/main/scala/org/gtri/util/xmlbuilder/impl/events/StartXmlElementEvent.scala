@@ -21,7 +21,7 @@
 */
 package org.gtri.util.xmlbuilder.impl.events
 
-import org.gtri.util.scala.exelog.sideeffects._
+import org.gtri.util.scala.exelog.noop._
 import org.gtri.util.xmlbuilder.impl.XmlElement
 import org.gtri.util.issue.api.DiagnosticLocator
 import org.gtri.util.xmlbuilder.api.{XmlContract, XmlEvent}
@@ -29,34 +29,36 @@ import com.google.common.collect.ImmutableMap
 import org.gtri.util.xsddatatypes.{XsdQName, XsdAnyURI, XsdNCName}
 
 object StartXmlElementEvent {
-  implicit val classlog = ClassLog(classOf[StartXmlElementEvent])
+  implicit val thisclass = classOf[StartXmlElementEvent]
+  implicit val log = Logger.getLog(thisclass)
 }
 case class StartXmlElementEvent(element : XmlElement, locator : DiagnosticLocator) extends XmlEvent {
   import StartXmlElementEvent._
 
   def pushTo(contract: XmlContract) {
-    implicit val log = enter("pushTo") { "contract" -> contract :: Nil }
-    +"Pushing StartXmlElementEvent to XmlContract"
-    ~"Build prefixToNamespaceURIMap"
-    val prefixToNamespaceURIMap = {
-      val builder = ImmutableMap.builder[XsdNCName, XsdAnyURI]()
-      for ((prefix, namespaceUri) <- element.prefixToNamespaceURIMap) {
-        builder.put(prefix, namespaceUri)
+    log.block("pushTo", Seq("contract" -> contract)) {
+      +"Pushing StartXmlElementEvent to XmlContract"
+      ~"Build prefixToNamespaceURIMap"
+      val prefixToNamespaceURIMap = {
+        val builder = ImmutableMap.builder[XsdNCName, XsdAnyURI]()
+        for ((prefix, namespaceUri) <- element.prefixToNamespaceURIMap) {
+          builder.put(prefix, namespaceUri)
+        }
+        builder.build()
       }
-      builder.build()
-    }
-    ~"Build attributes"
-    val attributes = {
-      val builder = ImmutableMap.builder[XsdQName, String]()
-      for ((name, value) <- element.attributesMap) {
-        builder.put(name, value)
+      ~"Build attributes"
+      val attributes = {
+        val builder = ImmutableMap.builder[XsdQName, String]()
+        for ((name, value) <- element.attributesMap) {
+          builder.put(name, value)
+        }
+        builder.build()
       }
-      builder.build()
+      val qName = element.qName
+      val value = element.value.orNull
+      ~s"contract.addXmlElement($qName, $value, $attributes, $prefixToNamespaceURIMap)"
+      contract.addXmlElement(qName, value, attributes, prefixToNamespaceURIMap)
     }
-    val qName = element.qName
-    val value = element.value.orNull
-    ~s"contract.addXmlElement($qName, $value, $attributes, $prefixToNamespaceURIMap)"
-    contract.addXmlElement(qName, value, attributes, prefixToNamespaceURIMap)
   }
 }
 
