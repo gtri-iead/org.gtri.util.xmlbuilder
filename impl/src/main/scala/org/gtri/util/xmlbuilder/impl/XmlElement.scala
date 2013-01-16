@@ -29,58 +29,51 @@ import org.gtri.util.issue.api.DiagnosticLocator
 
 
 object XmlElement {
-  implicit val thisclass = classOf[XmlElement]
-  implicit val log : Log = Logger.getLog(thisclass)
+  implicit val thisclass =    classOf[XmlElement]
+  implicit val log : Log =    Logger.getLog(thisclass)
 
   case class Metadata(
-    rawAttributesOrder: Option[Seq[String]] = None,
-    attributesOrder: Option[Seq[XsdQName]] = None,
-    prefixesOrder: Option[Seq[XsdNCName]] = None,
-    locator : Option[DiagnosticLocator] = None
+    optRawAttributesOrder:    Option[Seq[String]] = None, // Note: this includes xmlns:XXX
+    optAttributesOrder:       Option[Seq[XsdQName]] = None, // This does *not* include xmlns
+    optPrefixesOrder:         Option[Seq[XsdNCName]] = None,
+    optLocator :              Option[DiagnosticLocator] = None
   )
 
   def apply(
-    qName : XsdQName,
-    value : Option[String],
-    attributes : Seq[(XsdQName, String)],
-    prefixes : Seq[(XsdNCName, XsdAnyURI)]
+    qName :            XsdQName,
+    value :            Option[String],
+    attributes :       Seq[(XsdQName, String)],
+    prefixes :         Seq[(XsdNCName, XsdAnyURI)],
+    optLocator :       Option[DiagnosticLocator] = None,
+    optRawAttributes : Option[Seq[(String,String)]] = None
   ) = new XmlElement(
     qName,
     value,
     attributes.toMap,
     prefixes.toMap,
-    Some(Metadata(None, Some(attributes.map { _._1 }), Some(prefixes.map { _._1 }), None))
-  )
-
-  def apply(
-    qName : XsdQName,
-    value : Option[String],
-    attributes : Seq[(XsdQName, String)],
-    prefixes : Seq[(XsdNCName, XsdAnyURI)],
-    locator : DiagnosticLocator
-  ) = new XmlElement(
-    qName,
-    value,
-    attributes.toMap,
-    prefixes.toMap,
-    Some(Metadata(None, Some(attributes.map { _._1 }), Some(prefixes.map { _._1 }), Some(locator)))
+    Some(Metadata(
+      optRawAttributesOrder =  optRawAttributes map { _ map { _._1 } },
+      optAttributesOrder =     Some(attributes map { _._1 }),
+      optPrefixesOrder =       Some(prefixes map { _._1 }),
+      optLocator =             optLocator
+    ))
   )
 }
 case class XmlElement(
-  qName : XsdQName,
-  value : Option[String],
-  attributesMap : Map[XsdQName, String],
-  prefixToNamespaceURIMap : Map[XsdNCName, XsdAnyURI],
-  metadata : Option[Metadata] = None
+  qName :                     XsdQName,
+  value :                     Option[String],
+  attributesMap :             Map[XsdQName, String],
+  prefixToNamespaceURIMap :   Map[XsdNCName, XsdAnyURI],
+  metadata :                  Option[Metadata] = None
 )extends NamespaceURIToPrefixResolver {
   import XmlElement._
 
   lazy val orderedAttributes : Seq[(XsdQName, String)] = {
     log.block("orderAttributes") {
       +"Order attributes by attributesOrder metadata (if defined) or sort lexographically by name"
-      if(metadata.isDefined && metadata.get.attributesOrder.isDefined) {
+      if(metadata.isDefined && metadata.get.optAttributesOrder.isDefined) {
         ~"Sort by metadata attributesOrder"
-        metadata.get.attributesOrder.get.map({
+        metadata.get.optAttributesOrder.get.map({
           qName => attributesMap.get(qName).map { value => (qName,value) }
         }).flatten
       } else {
@@ -93,9 +86,9 @@ case class XmlElement(
   lazy val orderedPrefixes : Seq[(XsdNCName, XsdAnyURI)] = {
     log.block("orderedPrefixes") {
       +"Order prefixes by prefixOrder metadata (if defined) or sort lexographically name"
-      if(metadata.isDefined && metadata.get.prefixesOrder.isDefined) {
+      if(metadata.isDefined && metadata.get.optPrefixesOrder.isDefined) {
         ~"Sort by metadata prefixOrder"
-        metadata.get.prefixesOrder.get.map({
+        metadata.get.optPrefixesOrder.get.map({
           prefix => prefixToNamespaceURIMap.get(prefix).map { uri => (prefix,uri) }
         }).flatten
       } else {

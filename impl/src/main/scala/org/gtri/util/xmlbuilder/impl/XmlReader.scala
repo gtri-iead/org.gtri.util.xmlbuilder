@@ -38,16 +38,17 @@ import annotation.tailrec
 
 
 object XmlReader {
-  implicit val thisclass = classOf[XmlReader]
-  implicit val log = Logger.getLog(thisclass)
+  implicit val thisclass =  classOf[XmlReader]
+  implicit val log =        Logger.getLog(thisclass)
 }
 class XmlReader(
-  factory : XMLStreamReaderFactory,
-  issueHandlingStrategy : IssueHandlingStrategy,
-  val chunkSize : Int = 256
+  factory :                 XMLStreamReaderFactory,
+  issueHandlingStrategy :   IssueHandlingStrategy,
+  val chunkSize :           Int = 256
 ) extends Enumerator[XmlEvent] {
-  require(chunkSize > 0)
   import XmlReader._
+
+  require(chunkSize > 0)
 
   def initialState() = {
     log.block("initialState") {
@@ -126,6 +127,7 @@ class XmlReader(
         val eventType = reader.getEventType()
         ~s"MATCH reader.getEventType=$eventType"
         eventType match {
+  // TODO: these don't work for some reason
   //        case XMLStreamConstants.ATTRIBUTE => {
   //          val i = reader.getAttributeCount - 1
   //          println("getAttributeCount=" + reader.getAttributeCount)
@@ -167,7 +169,7 @@ class XmlReader(
             val (value, peekQueue) = peekParseElementValue()
             ~s"Peek parsed value=$value peekQueue=$peekQueue"
             val retv = peekQueue :::
-              StartXmlElementEvent(XmlElement(qName, value, attributes, prefixes, locator), locator) :: Nil
+              StartXmlElementEvent(XmlElement(qName, value, attributes, prefixes, Some(locator)), locator) :: Nil
             retv 
           }
           case XMLStreamConstants.END_ELEMENT => {
@@ -219,6 +221,8 @@ class XmlReader(
       log.block(s"getElementInfoFromReader") {
 
         val qName = getElementQNameFromReader
+
+        ~"Building attributes from reader"
         val attributes = {
           for(i <- 0 until reader.getAttributeCount())
           yield {
@@ -230,7 +234,8 @@ class XmlReader(
             qName -> value
           }
         }
-  
+
+        ~"Building prefixes from reader"
         val prefixes = {
           for(i <- 0 until reader.getNamespaceCount())
           yield {

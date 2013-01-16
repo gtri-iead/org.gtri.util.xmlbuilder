@@ -23,7 +23,13 @@ package org.gtri.util.xmlbuilder.impl
 
 import org.gtri.util.xmlbuilder.api
 
-case class XmlFileLocator(charOffset : Int, columnNumber : Int, lineNumber : Int, publicId : String, systemId : String) extends api.XmlFileLocator {
+case class XmlFileLocator(
+  charOffset :    Int,
+  columnNumber :  Int,
+  lineNumber :    Int,
+  publicId :      String,
+  systemId :      String
+) extends api.XmlFileLocator {
 
   override def toString = {
     val s = new StringBuilder

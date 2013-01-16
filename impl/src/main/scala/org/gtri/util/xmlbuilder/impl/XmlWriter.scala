@@ -38,15 +38,17 @@ import org.gtri.util.xmlbuilder.api.XmlFactory.XMLStreamWriterFactory
 import org.gtri.util.xmlbuilder.impl.events._
 
 object XmlWriter {
-  implicit val thisclass = classOf[XmlWriter]
-  implicit val log = Logger.getLog(thisclass)
+  implicit val thisclass =  classOf[XmlWriter]
+  implicit val log =        Logger.getLog(thisclass)
 }
 
 class XmlWriter(
-  factory : XMLStreamWriterFactory,
-  issueHandlingStrategy : IssueHandlingStrategy
+  factory :                 XMLStreamWriterFactory,
+  issueHandlingStrategy :   IssueHandlingStrategy
 ) extends Iteratee[XmlEvent, Unit] {
+
   import XmlWriter._
+
   def initialState =  {
     log.block("initialState"){
       try {
@@ -105,7 +107,8 @@ class XmlWriter(
           case e:StartXmlElementEvent => {
             ~"Write start element, append element to stack"
             val newStack = e.element :: stack
-            // Start element
+
+            ~"Start an element"
             val qName = e.element.qName
             val localName = qName.getLocalName.toString
             val nsURI = qName.getNamespaceURI.toString
@@ -187,7 +190,7 @@ class XmlWriter(
       log.begin("doIsValidPrefixForNamespaceURI", Seq("prefix" -> prefix, "namespaceURI" -> namespaceURI))
       ~"Stack empty?"
       if(stack.isEmpty) {
-        ~"Yes"
+        ~"Yes, didn't find prefix for namespace"
         val retv = false
         log.end("doIsValidPrefixForNamespaceURI", retv)
         retv
@@ -196,7 +199,7 @@ class XmlWriter(
         val head :: tail = stack
         ~"Does head contain prefix=namespaceURI?"
         if(head.isValidPrefixForNamespaceURI(prefix, namespaceURI)) {
-          ~"Yes"
+          ~"Yes, found prefix for namespace"
           val retv = true
           log.end("doIsValidPrefixForNamespaceURI", retv)
           retv
@@ -212,7 +215,7 @@ class XmlWriter(
       log.begin("doGetPrefixForNamespaceURI", Seq("stack" -> stack, "namespaceURI" -> namespaceURI))
         ~"Stack empty?"
         if(stack.isEmpty) {
-          ~"Yes"
+          ~"Yes, didn't find prefix for namespace"
           val retv = null
           log.end("doGetPrefixForNamespaceURI", retv)
           retv
@@ -222,7 +225,7 @@ class XmlWriter(
           ~"Does head have prefix for namespaceURI?"
           val result = head.getPrefixForNamespaceURI(namespaceURI)
           if(result != null) {
-            ~"Yes"
+            ~"Yes, found prefix for namespace"
             val retv = result
             log.end("doGetPrefixForNamespaceURI", retv)
             retv
